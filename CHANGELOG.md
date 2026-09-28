@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.2.1 (2026-09-28)
+
+- Fix: when saving a new food (for example after a scan) with a required field missing, the error (like "Enter the calories for that serving.") now appears **inside the New food panel**, right by the Save button, instead of at the bottom of the screen where it was easy to miss. The field that needs attention is focused.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.2.0 (2026-09-28)
 
 - Food tab: a **Workout day** toggle under the day's totals. Tap it to mark that the day included a workout; tap again to clear it.

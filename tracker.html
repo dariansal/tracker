@@ -219,6 +219,7 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .wkstats .wkrow b { font-size: 1.2rem; }
 .wkstats .wk-n { color: var(--muted); font-size: .85rem; }
 .wkstats .wksum { margin: 10px 0 0; color: var(--muted); font-size: .9rem; }
+.np-err { margin: 2px 0 12px; color: var(--danger); font-size: .92rem; font-weight: 600; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
 /* food: quick add */
@@ -489,6 +490,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         </div>
         <div class="np-name"><label for="nName">Name</label><input id="nName" placeholder="Name this food" autocomplete="off">
           <p class="np-sub" id="nNameHint" style="margin:6px 0 0" hidden>Press space to use the suggested name, or type your own.</p></div>
+        <p class="np-err" id="npErr" role="alert" hidden></p>
         <div class="actions">
           <button type="button" id="nAdd">Save food</button>
           <label for="scanFile" class="btn ghost" id="npRescan" role="button" tabindex="0">Scan again</label>
@@ -1035,7 +1037,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.2.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.2.1";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1717,12 +1719,19 @@ window.appPrefs = { glow: true };
     unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
     $("newPanel").hidden = false;
     $("npStart").hidden = false; $("npForm").hidden = true; $("scanMsg").hidden = true;
-    setStatus("");
+    setStatus(""); npClearError();
     $("newPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
-  function closeNewFood() { $("newPanel").hidden = true; }
+  function closeNewFood() { $("newPanel").hidden = true; npClearError(); }
+  function npClearError() { const e = $("npErr"); e.hidden = true; e.textContent = ""; }
+  function npError(msg, focusId) {
+    const e = $("npErr"); e.textContent = msg; e.hidden = false;
+    if (focusId) $(focusId).focus();
+    e.scrollIntoView({ block: "nearest" });
+  }
   function showNewForm(sub) {
     $("npStart").hidden = true; $("npForm").hidden = false;
+    npClearError();
     $("npSub").textContent = sub;
     if (!$("nUnit").options.length) unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
     if (!$("nAmt").value) $("nAmt").value = 100;
@@ -1849,11 +1858,12 @@ window.appPrefs = { glow: true };
     const name = $("nName").value.trim() || nameSuggestion, unit = $("nUnit").value;
     const amt = parseFloat($("nAmt").value), cupG = parseFloat($("nCup").value), eachG = parseFloat($("nEach").value);
     const nums = ["nK", "nP", "nC", "nF"].map(id => parseFloat($(id).value) || 0);
-    if (!name) { setStatus("Give the new food a name.", true); $("nName").focus(); return; }
-    if (!(amt > 0)) { setStatus("Enter the serving size.", true); $("nAmt").focus(); return; }
-    if (VOL[unit] && !(cupG > 0)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("nCup").focus(); return; }
-    if (unit === "each" && !(eachG > 0)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("nEach").focus(); return; }
-    if (!nums[0]) { setStatus("Enter the calories for that serving.", true); return; }
+    npClearError();
+    if (!name) { npError("Give the new food a name.", "nName"); return; }
+    if (!(amt > 0)) { npError("Enter the serving size.", "nAmt"); return; }
+    if (VOL[unit] && !(cupG > 0)) { npError("Enter how many grams are in 1 cup of this food.", "nCup"); return; }
+    if (unit === "each" && !(eachG > 0)) { npError("Enter how many grams one whole item weighs (for example, one egg or one scoop).", "nEach"); return; }
+    if (!nums[0]) { npError("Enter the calories for that serving.", "nK"); return; }
     const grams = amt * (unit === "each" ? eachG : VOL[unit] ? cupG * VOL[unit] : G[unit]);
     const f = { id: "c" + Date.now().toString(36), name, detail: "", base: "g",
       units: unitsWith(cupG, eachG),
@@ -1871,7 +1881,7 @@ window.appPrefs = { glow: true };
       // didn't save: take it back out and reopen the panel with everything still filled in
       foods = foods.filter(x => x.id !== f.id); render();
       $("newPanel").hidden = false; showNewForm(sub);
-      setStatus("That didn't save. Check your connection and tap Save food again.", true);
+      npError("That didn't save. Check your connection and tap Save food again.");
     }
   });
 
