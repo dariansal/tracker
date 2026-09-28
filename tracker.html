@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #EEF2F3;
+  --card: #FFFFFF;
+  --ink: #1B2638;
+  --muted: #5E6B7D;
+  --rule: #D5DDE2;
+  --daily: #7FA7A0;
+  --weekly: #2446A8;
+  --danger: #B3363A;
+  --field: #F6F8F9;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10161F; --card: #18212D; --ink: #E6ECF2; --muted: #93A1B3;
+    --rule: #2A3646; --daily: #6FA89E; --weekly: #8FA9FF; --danger: #F08A8D; --field: #121A24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10161F; --card: #18212D; --ink: #E6ECF2; --muted: #93A1B3;
+  --rule: #2A3646; --daily: #6FA89E; --weekly: #8FA9FF; --danger: #F08A8D; --field: #121A24;
+  color-scheme: dark;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+/* collapsible sections don't pass sizing down through their internals, so set it directly */
+details *, input, select, textarea, button { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.5 "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+main { max-width: 760px; margin: 0 auto; padding: 28px 18px 48px; }
+h1 {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 600; font-size: 2rem; line-height: 1.15; margin: 0 0 4px;
+}
+.lede { color: var(--muted); margin: 0 0 24px; }
+
+.entry {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;
+  background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px;
+}
+label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+input {
+  width: 100%; font: inherit; color: var(--ink); background: var(--field);
+  border: 1px solid var(--rule); border-radius: 9px; padding: 10px 12px; min-height: 46px;
+}
+.entry > div { min-width: 0; }
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.weight-wrap { position: relative; }
+.weight-wrap input { padding-right: 38px; }
+.weight-wrap span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+button {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 9px; min-height: 46px;
+  border: 1px solid var(--weekly); background: var(--weekly); color: var(--card); padding: 0 20px;
+}
+button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly) 45%, transparent); outline-offset: 2px; }
+.status { min-height: 1.5em; font-size: .9rem; color: var(--muted); margin: 8px 2px 0; }
+.status.err { color: var(--danger); }
+
+.now {
+  display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: baseline; margin: 28px 2px 8px;
+}
+.now .big { font-family: "Fraunces", Georgia, serif; font-size: 2.6rem; font-weight: 500; line-height: 1; }
+.now .big small { font-family: "Instrument Sans", system-ui, sans-serif; font-size: 1rem; color: var(--muted); margin-left: 4px; }
+.now .aside { color: var(--muted); }
+.now .aside b { color: var(--ink); font-weight: 600; }
+
+section.chart { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 16px 10px; margin-top: 16px; }
+section.chart h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+section.chart p.sub { margin: 2px 0 8px; color: var(--muted); font-size: .9rem; }
+.readout { min-height: 1.5em; font-size: .92rem; margin-bottom: 4px; }
+.plot { width: 100%; touch-action: pan-y; }
+.plot svg { display: block; width: 100%; height: auto; }
+.empty { color: var(--muted); padding: 36px 0; text-align: center; }
+
+details { margin-top: 20px; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 12px 16px; }
+summary { cursor: pointer; font-weight: 600; }
+.list { max-height: 340px; overflow: auto; margin-top: 10px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--rule); }
+.row:first-child { border-top: 0; }
+.row .d { color: var(--muted); }
+.readout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 36px; }
+.del.armed, .readout .del.armed, .row .del.armed { background: var(--danger); color: var(--card); border-color: var(--danger); }
+.del, .readout .del, .row .del { flex-shrink: 0; min-height: 34px; padding: 0 12px; background: transparent; color: var(--danger); border-color: var(--rule); font-weight: 500; }
+
+@media (max-width: 520px) {
+  .entry { grid-template-columns: 1fr 1fr; }
+  .entry button { grid-column: 1 / -1; }
+  h1 { font-size: 1.7rem; }
+}
+@media (max-width: 420px) {
+  .entry { grid-template-columns: 1fr; }
+}
+
+/* maintenance + weekly table */
+.maint { margin-top: 16px; }
+.maint h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px; }
+.maint .num { font-family: "Fraunces", Georgia, serif; font-size: 2.3rem; font-weight: 500; line-height: 1.1; }
+.maint .num small { font-family: "Instrument Sans", system-ui, sans-serif; font-size: 1rem; color: var(--muted); margin-left: 4px; }
+.maint .kind { display: inline-block; font-size: .8rem; font-weight: 600; color: var(--weekly); border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; margin-bottom: 6px; }
+.maint p { margin: 6px 0 0; }
+.maint .muted, .maint p.muted { color: var(--muted); font-size: .9rem; }
+.maint .muted { color: var(--muted); font-size: .92rem; }
+.bar { height: 8px; background: var(--field); border: 1px solid var(--rule); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.bar i { display: block; height: 100%; background: var(--daily); }
+.prog { display: grid; gap: 10px; margin-top: 12px; font-size: .92rem; }
+.mset { margin-top: 14px; padding: 0; border: 0; background: transparent; }
+.mset summary { font-weight: 500; color: var(--weekly); }
+.mset .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.mset .grid3 > div { min-width: 0; }
+.tablewrap { overflow-x: auto; margin: 6px -4px 4px; }
+table.wk { width: 100%; border-collapse: collapse; font-size: .92rem; }
+table.wk th { text-align: right; font-weight: 500; color: var(--muted); font-size: .8rem; padding: 6px 6px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+table.wk td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+table.wk th:first-child, table.wk td:first-child { text-align: left; }
+table.wk tr:last-child td { border-bottom: 0; }
+table.wk td small { color: var(--muted); }
+.up, .down { color: var(--ink); }
+
+/* glowing line that travels around the edge of the screen */
+.edge-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none; }
+
+/* settings */
+.top { position: relative; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 10px !important; }
+.top h1 { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+.top .tabs { flex: 0 0 auto; }
+@media (max-width: 400px) { .top h1 { font-size: 1.5rem; } .tabs button { padding: 0 14px; } }
+.gear { flex: 0 0 auto; min-height: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--card); color: var(--muted); border: 1px solid var(--rule); border-radius: 12px; }
+.gear:hover { color: var(--ink); }
+.sheet.settings { text-align: left; gap: 14px; }
+.setrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 2px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); cursor: pointer; }
+.settext { display: grid; gap: 2px; }
+.settext > span { font-weight: 600; color: var(--ink); font-size: 1rem; margin: 0; }
+.sheet.settings .settext small { color: var(--muted); font-size: .86rem; text-align: left; margin: 0; }
+.sheet.settings > b { text-align: center; }
+.sheet.settings .appver { text-align: center; color: var(--muted); font-size: .8rem; margin: 0; }
+input.toggle {
+  -webkit-appearance: none; appearance: none; flex-shrink: 0; width: 51px; height: 31px; margin: 0; min-height: 0; padding: 0;
+  border-radius: 999px; border: 0; background: var(--rule); position: relative; cursor: pointer; transition: background .2s ease;
+}
+input.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s ease;
+}
+input.toggle:checked { background: var(--weekly); }
+input.toggle:checked::after { transform: translateX(20px); }
+input.toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly) 45%, transparent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { input.toggle, input.toggle::after { transition: none; } }
+
+/* app shell */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.top h1 { margin: 0; }
+.tabs { position: relative; display: inline-flex; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 4px; gap: 4px; }
+.tabs button { position: relative; z-index: 1; min-height: 40px; padding: 0 18px; background: transparent; color: var(--muted); border: 0; border-radius: 9px; font-weight: 600; transition: color .28s ease; }
+.tabs button[aria-selected="true"] { color: var(--card); }
+.tab-pill {
+  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0;
+  background: var(--weekly); border-radius: 9px; pointer-events: none;
+  transition: transform .32s cubic-bezier(.3, .7, .2, 1), width .32s cubic-bezier(.3, .7, .2, 1);
+}
+.tabs.no-anim .tab-pill, .tabs.no-anim button { transition: none; }
+@media (prefers-reduced-motion: reduce) { .tab-pill, .tabs button { transition: none; } }
+.ghost { background: transparent; color: var(--weekly); border-color: var(--rule); }
+select {
+  width: 100%; font: inherit; color: var(--ink); background: var(--field);
+  border: 1px solid var(--rule); border-radius: 9px; padding: 10px 12px; min-height: 46px;
+}
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px; }
+h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
+
+/* food: day bar */
+.daybar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.daybar button { min-width: 46px; padding: 0; font-size: 1.3rem; background: var(--card); color: var(--ink); border-color: var(--rule); }
+.daybar .d { font-weight: 600; text-align: center; }
+.daybar .d small { display: block; font-weight: 400; color: var(--muted); font-size: .85rem; }
+
+/* food: totals */
+.totals { display: grid; grid-template-columns: auto 1fr; gap: 10px 28px; align-items: center; }
+.totals .kcal { font-family: "Fraunces", Georgia, serif; font-size: 2.6rem; font-weight: 500; line-height: 1; }
+.totals .kcal small { font-family: "Instrument Sans", system-ui, sans-serif; font-size: 1rem; color: var(--muted); margin-left: 4px; }
+.macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.macros div { text-align: center; }
+.macros b { display: block; font-size: 1.25rem; }
+.macros span { color: var(--muted); font-size: .85rem; }
+@media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
+
+/* food: quick add */
+.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.quick button { background: var(--card); color: var(--ink); border-color: var(--rule); font-weight: 500; text-align: left; padding: 10px 12px; line-height: 1.25; }
+.quick button small { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; margin-top: 2px; }
+.quick button[aria-pressed="true"] { border-color: var(--weekly); box-shadow: inset 0 0 0 1px var(--weekly); }
+.adder { margin-top: 10px; }
+#adder, #editPanel { margin-top: 24px; }   /* a line of space between the food buttons and the open food */
+.adder-head b { font-size: 1.05rem; }
+.namerow { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.namerow b { min-width: 0; overflow-wrap: anywhere; }
+.iconbtn { min-height: 36px; min-width: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 8px; }
+.iconbtn:hover { color: var(--weekly); border-color: var(--rule); }
+#aNameInput { flex: 1; min-height: 40px; padding: 6px 10px; font-weight: 600; }
+.adder-head span { display: block; color: var(--muted); font-size: .9rem; }
+.adder-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
+.adder-row > div { min-width: 0; }
+.preview { margin: 12px 0; color: var(--muted); }
+.preview b { color: var(--ink); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* food: eaten list */
+.item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.item:first-child { border-top: 0; padding-top: 0; }
+.item .what { min-width: 0; }
+.item .what small { display: block; color: var(--muted); }
+.fempty { color: var(--muted); margin: 0 0 12px; }
+
+/* food: editor */
+.fed { display: grid; gap: 12px; margin-top: 10px; }
+.fed .f { border-top: 1px solid var(--rule); padding-top: 12px; }
+.fed .f:first-child { border-top: 0; }
+.fed .f .nm { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fed .f .nm small { color: var(--muted); }
+.fed > * { min-width: 0; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.grid4 > div { min-width: 0; }
+.grid4 input { padding: 8px; min-height: 40px; }
+.grid4 label { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fed label { font-size: .78rem; }
+.newfood { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.newfood > div { min-width: 0; }
+.newfood .full, .newfood .grid4, .newfood > button { grid-column: 1 / -1; }
+textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--field); resize: vertical;
+  border: 1px solid var(--rule); border-radius: 9px; padding: 10px 12px; min-height: 64px;
+}
+textarea:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly) 45%, transparent); outline-offset: 2px; }
+.scan { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--rule); border-radius: 12px; margin-top: 10px; }
+.scan button { justify-self: start; }
+.scan button[disabled] { opacity: .6; cursor: progress; }
+.scan .note { margin: 0; }
+.np-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.np-head b { font-size: 1.05rem; }
+button.small { min-height: 34px; padding: 0 12px; font-weight: 500; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; user-select: none;
+  font: inherit; font-weight: 600; border-radius: 9px; min-height: 46px; padding: 0 20px; margin: 0;
+  border: 1px solid var(--weekly); background: var(--weekly); color: var(--card); font-size: 1rem;
+}
+.btn.ghost { background: transparent; color: var(--weekly); border-color: var(--rule); }
+.btn[aria-disabled="true"] { opacity: .6; cursor: progress; }
+.btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly) 45%, transparent); outline-offset: 2px; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); pointer-events: none; }
+.scanbig { width: 100%; min-height: 52px; }
+#scanMsg { margin: 10px 0 0; }
+.linkbtn { display: block; margin: 10px auto 0; min-height: 36px; background: transparent; border: 0; color: var(--weekly); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.np-sub { margin: 0 0 6px; color: var(--muted); font-size: .92rem; }
+.np-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 10px; }
+.np-row > div, .np-name { min-width: 0; }
+.np-row .span2 { grid-column: 1 / -1; }
+.np-name { margin: 10px 0 14px; }
+.hint { margin: 8px 2px 10px; color: var(--muted); font-size: .88rem; }
+.searchbox { position: relative; }
+.btn.scantop { width: 100%; min-height: 64px; gap: 10px; font-size: 1.05rem; border-radius: 14px; margin: 14px 0 0; }
+#manualTop { margin: 6px auto 16px; }
+.toppanel { margin: 0 0 16px; }
+.btn.scantop svg { flex-shrink: 0; }
+.searchbox .sico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.searchbox input { padding-left: 38px; -webkit-appearance: none; appearance: none; }
+.results { margin-top: 8px; padding: 6px 0; max-height: 60vh; overflow-y: auto; }
+.results h3 { font-size: .8rem; font-weight: 600; color: var(--muted); margin: 8px 16px 4px; }
+.results button.res {
+  display: block; width: 100%; text-align: left; background: transparent; color: var(--ink); border: 0; border-radius: 0;
+  padding: 10px 16px; min-height: 48px; font-weight: 500; line-height: 1.3;
+}
+.results button.res:hover, .results button.res:focus-visible { background: var(--field); }
+.results button.res small { display: block; color: var(--muted); font-weight: 400; font-size: .84rem; margin-top: 2px; }
+.results .none { color: var(--muted); padding: 10px 16px; margin: 0; font-size: .92rem; }
+.results button.ask { color: var(--weekly); }
+.quick button.food {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.quick button.food.pressing { transform: scale(.95); }
+.tile-rename { min-width: 0; }
+.tile-rename input { width: 100%; height: 100%; min-height: 46px; border: 1px solid var(--weekly); border-radius: 9px;
+  box-shadow: inset 0 0 0 1px var(--weekly); background: var(--card); padding: 10px 12px; font-weight: 500; font-size: 16px; }
+.quick button.food.held { transform: scale(1.04); box-shadow: 0 6px 18px rgba(20, 30, 50, .18); border-color: var(--weekly); }
+.sheet-back { position: fixed; inset: 0; background: rgba(10, 15, 25, .35); z-index: 20; opacity: 0; transition: opacity .2s ease; }
+.sheet-back.show { opacity: 1; }
+.sheet {
+  position: fixed; left: 50%; bottom: 0; z-index: 21; width: min(100%, 520px);
+  transform: translate(-50%, 100%); transition: transform .26s cubic-bezier(.3, .7, .2, 1);
+  background: var(--card); border: 1px solid var(--rule); border-bottom: 0; border-radius: 18px 18px 0 0;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px;
+}
+.sheet.show { transform: translate(-50%, 0); }
+.sheet b { font-size: 1.1rem; text-align: center; }
+.sheet small { color: var(--muted); text-align: center; margin-bottom: 6px; }
+.sheet-btn { width: 100%; min-height: 50px; }
+.sheet-btn.danger { background: transparent; color: var(--danger); border-color: var(--rule); }
+.sheet-btn.danger.armed { background: var(--danger); color: var(--card); border-color: var(--danger); }
+.sheet-btn.plain { background: transparent; color: var(--ink); border-color: var(--rule); }
+@media (prefers-reduced-motion: reduce) { .sheet, .sheet-back, .quick button.food { transition: none; } }
+details h3 { font-size: 1rem; margin: 20px 0 0; }
+.note { color: var(--muted); font-size: .88rem; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<canvas class="edge-canvas" id="edgeCanvas" aria-hidden="true"></canvas>
+<main>
+  <header class="top">
+    <h1>Tracker</h1>
+    <nav class="tabs no-anim" role="tablist" aria-label="Sections">
+      <span class="tab-pill" aria-hidden="true"></span>
+      <button type="button" role="tab" id="tab-weight" aria-controls="pane-weight" aria-selected="true">Weight</button>
+      <button type="button" role="tab" id="tab-food" aria-controls="pane-food" aria-selected="false">Food</button>
+    </nav>
+    <button type="button" class="gear" id="openSettings" aria-label="Settings" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </button>
+  </header>
+  <div id="pane-weight" role="tabpanel" aria-labelledby="tab-weight">
+  <p class="lede">One weigh-in a day. The weekly average smooths out water and salt swings.</p>
+
+  <form class="entry" id="entry" autocomplete="off">
+    <div>
+      <label for="date">Date</label>
+      <input type="date" id="date" required>
+    </div>
+    <div>
+      <label for="weight">Weight</label>
+      <div class="weight-wrap">
+        <input type="number" id="weight" inputmode="decimal" step="0.1" min="50" max="700" placeholder="0.0" required>
+        <span>lb</span>
+      </div>
+    </div>
+    <button type="submit">Save weigh-in</button>
+  </form>
+  <p class="status" id="status" role="status"></p>
+
+  <div class="now" id="now" hidden>
+    <div class="big" id="latest"></div>
+    <div class="aside" id="latestMeta"></div>
+  </div>
+
+  <section class="chart" aria-labelledby="h-daily">
+    <h2 id="h-daily">Day by day</h2>
+    <p class="sub">Every weigh-in you've logged. Tap a point to see that day's weight and calories, or delete it.</p>
+    <div class="readout" id="ro-daily"></div>
+    <div class="plot" id="plot-daily"></div>
+  </section>
+
+  <section class="chart" aria-labelledby="h-weekly">
+    <h2 id="h-weekly">Weekly average</h2>
+    <p class="sub">Mean of each Monday-to-Sunday week.</p>
+    <div class="readout" id="ro-weekly"></div>
+    <div class="plot" id="plot-weekly"></div>
+  </section>
+
+  <section class="chart" aria-labelledby="h-wk">
+    <h2 id="h-wk">Week by week</h2>
+    <p class="sub">Your average weight next to your average daily calories.</p>
+    <div class="tablewrap"><table class="wk" id="wkTable"></table></div>
+  </section>
+
+  <section class="card maint" style="margin-bottom:0" aria-labelledby="h-maint">
+    <h2 id="h-maint">Maintenance calories</h2>
+    <p class="muted" style="margin:-4px 0 10px">What you can eat each day to keep your weight steady.</p>
+    <div id="mBody"></div>
+    <details class="mset" id="mSet">
+      <summary>Height and age for a rough guess</summary>
+      <div class="grid3">
+        <div><label for="hFt">Height (ft)</label><input id="hFt" type="number" inputmode="numeric" min="3" max="8" step="1"></div>
+        <div><label for="hIn">Inches</label><input id="hIn" type="number" inputmode="decimal" min="0" max="11.5" step="0.5"></div>
+        <div><label for="age">Age</label><input id="age" type="number" inputmode="numeric" min="13" max="100" step="1"></div>
+      </div>
+    </details>
+  </section>
+
+  <details id="history">
+    <summary>All weigh-ins</summary>
+    <div class="list" id="list"></div>
+  </details>
+
+  </div>
+
+  <div id="pane-food" role="tabpanel" aria-labelledby="tab-food" hidden>
+    <div class="daybar">
+      <button type="button" id="fPrev" aria-label="Previous day">‹</button>
+      <div class="d" id="fDay"></div>
+      <button type="button" id="fNext" aria-label="Next day">›</button>
+    </div>
+
+    <div class="card totals" aria-live="polite">
+      <div class="kcal"><span id="tK">0</span><small>kcal</small></div>
+      <div class="macros">
+        <div><b id="tP">0 g</b><span>Protein</span></div>
+        <div><b id="tC">0 g</b><span>Carbs</span></div>
+        <div><b id="tF">0 g</b><span>Fat</span></div>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-bottom:22px">Add New Food</h2>
+    <div class="searchbox">
+      <svg class="sico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="fSearch" placeholder="Search foods" autocomplete="off" enterkeyhint="search" aria-label="Search foods" aria-controls="fResults">
+    </div>
+    <div class="card results" id="fResults" hidden></div>
+    <label for="scanFile" id="scanTop" class="btn scanbig scantop" role="button" tabindex="0">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      <span id="scanTopText">Scan nutrition label</span>
+    </label>
+    <button type="button" class="linkbtn" id="manualTop">Or enter a food by hand</button>
+    <div class="card adder toppanel" id="newPanel" hidden>
+      <div class="np-head"><b>New food</b><button type="button" class="ghost small" id="npClose">Cancel</button></div>
+      <div id="npStart">
+        <label for="scanFile" id="scanBtn" class="btn scanbig" role="button" tabindex="0">Scan nutrition label</label>
+        <input type="file" id="scanFile" class="vh" accept="image/*" capture="environment">
+        <p class="np-sub" id="scanMsg" hidden></p>
+        <button type="button" class="linkbtn" id="npManual">Enter it by hand instead</button>
+      </div>
+      <div id="npForm" hidden>
+        <p class="np-sub" id="npSub"></p>
+        <div class="grid4">
+          <div><label for="nK">kcal</label><input id="nK" type="number" inputmode="decimal" step="any" min="0"></div>
+          <div><label for="nP">Protein g</label><input id="nP" type="number" inputmode="decimal" step="any" min="0"></div>
+          <div><label for="nC">Carbs g</label><input id="nC" type="number" inputmode="decimal" step="any" min="0"></div>
+          <div><label for="nF">Fat g</label><input id="nF" type="number" inputmode="decimal" step="any" min="0"></div>
+        </div>
+        <div class="np-row">
+          <div><label for="nAmt">Serving</label><input id="nAmt" type="number" inputmode="decimal" step="any" min="0"></div>
+          <div><label for="nUnit">Unit</label><select id="nUnit"></select></div>
+          <div><label for="nCup">Grams in 1 cup</label><input id="nCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
+          <div><label for="nEach">Grams in 1 whole</label><input id="nEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
+        </div>
+        <div class="np-name"><label for="nName">Name</label><input id="nName" placeholder="Name this food" autocomplete="off">
+          <p class="np-sub" id="nNameHint" style="margin:6px 0 0" hidden>Press space to use the suggested name, or type your own.</p></div>
+        <div class="actions">
+          <button type="button" id="nAdd">Save food</button>
+          <label for="scanFile" class="btn ghost" id="npRescan" role="button" tabindex="0">Scan again</label>
+        </div>
+      </div>
+    </div>
+    <h2 class="sec">Foods</h2>
+    <div class="quick" id="quick"></div>
+    <div class="card adder" id="adder" hidden>
+      <div class="adder-head">
+        <div class="namerow">
+          <b id="aName"></b>
+          <button type="button" class="iconbtn" id="aRename" aria-label="Rename this food" title="Rename">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <input id="aNameInput" aria-label="Food name" autocomplete="off" hidden>
+        </div>
+      </div>
+      <div class="adder-row">
+        <div><label for="aAmt">Amount</label><input id="aAmt" type="number" inputmode="decimal" step="any" min="0"></div>
+        <div><label for="aUnit">Unit</label><select id="aUnit"></select></div>
+        <div id="aOilWrap"><label for="aOil">Olive oil (tbsp)</label><input id="aOil" type="number" inputmode="decimal" step="0.5" min="0"></div>
+      </div>
+      <p class="preview" id="aPrev"></p>
+      <div class="actions">
+        <button type="button" id="aAdd">Add to day</button>
+        <button type="button" id="aCancel" class="ghost">Cancel</button>
+      </div>
+    </div>
+    <div class="card adder" id="editPanel" hidden>
+      <div class="np-name" style="margin-top:0"><label for="eName">Name</label><input id="eName"></div>
+      <div class="np-row" style="margin:0 0 10px">
+        <div><label for="eAmt">Serving</label><input id="eAmt" type="number" inputmode="decimal" step="any" min="0"></div>
+        <div><label for="eUnit">Unit</label><select id="eUnit"></select></div>
+        <div><label for="eCup">Grams in 1 cup</label><input id="eCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
+        <div><label for="eEach">Grams in 1 whole</label><input id="eEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
+      </div>
+      <div class="grid4">
+        <div><label for="eK">kcal</label><input id="eK" type="number" inputmode="decimal" step="any" min="0"></div>
+        <div><label for="eP">Protein g</label><input id="eP" type="number" inputmode="decimal" step="any" min="0"></div>
+        <div><label for="eC">Carbs g</label><input id="eC" type="number" inputmode="decimal" step="any" min="0"></div>
+        <div><label for="eF">Fat g</label><input id="eF" type="number" inputmode="decimal" step="any" min="0"></div>
+      </div>
+      <div class="actions" style="margin-top:14px"><button type="button" id="eSave">Save changes</button><button type="button" class="ghost" id="epClose">Cancel</button></div>
+    </div>
+    <p class="status" id="fStatus" role="status"></p>
+
+    <h2 class="sec" id="eatenHead">Eaten Today</h2>
+    <div class="card">
+      <div id="fList"></div>
+      <button type="button" id="fCopy" class="ghost" hidden>Copy the day before</button>
+    </div>
+
+    <div class="sheet-back" id="sheetBack" hidden></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+      <b id="sheetTitle"></b>
+      <small id="sheetSub"></small>
+      <button type="button" id="shEdit" class="sheet-btn">Edit</button>
+      <button type="button" id="shDel" class="sheet-btn danger">Delete</button>
+    </div>
+  </div>
+</main>
+<div class="sheet-back" id="setBack" hidden></div>
+<div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+  <b id="setTitle">Settings</b>
+  <label class="setrow" for="prefGlow">
+    <span class="settext"><span>Glowing edge</span><small>A soft line that circles the screen for 20 seconds every couple of minutes.</small></span>
+    <input type="checkbox" id="prefGlow" class="toggle" role="switch">
+  </label>
+  <button type="button" id="setDone" class="sheet-btn">Done</button>
+  <small class="appver" id="appVersion"></small>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const LS_KEY = "weight-log-v1";
+  // calories per day, published by the food section: { "YYYY-MM-DD": kcal }
+  const kcalOf = key => ((window.appShared && window.appShared.kcal) || {})[key];
+  const fmtK = v => Math.round(v).toLocaleString();
+  const LS_PROFILE = "profile-v1";
+  let profile = { heightIn: null, age: null };
+  try { const pr = JSON.parse(localStorage.getItem(LS_PROFILE) || "null"); if (pr) profile = { ...profile, ...pr }; } catch {}
+  const MIN_WEIGHINS = 10, MIN_SPAN_DAYS = 14, MIN_FOOD_DAYS = 10, WINDOW_DAYS = 28;
+  const dayNum = key => Math.round(parse(key).getTime() / 864e5);
+  let entries = {};          // { "YYYY-MM-DD": number }
+  let db = null;             // db namespace when available
+  let mode = "pending";      // "db" | "local" | "pending"
+
+  // ---------- date helpers ----------
+  const pad = n => String(n).padStart(2, "0");
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const monday = d => { const x = new Date(d); const off = (x.getDay() + 6) % 7; x.setDate(x.getDate() - off); return x; };
+  const fmtShort = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const lb = v => v.toFixed(1);
+
+  $("date").value = iso(new Date());
+  const shiftDate = (key, days) => { const d = parse(key); d.setDate(d.getDate() + days); return iso(d); };
+
+  // ---------- local fallback ----------
+  function loadLocal() {
+    try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) || {} : {}; }
+    catch { return {}; }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(entries)); return true; } catch { return false; }
+  }
+
+  function setStatus(msg, err) {
+    const s = $("status"); s.textContent = msg || ""; s.classList.toggle("err", !!err);
+  }
+
+  // Render right away with whatever this browser has, then connect storage.
+  entries = loadLocal();
+  render();
+
+  (async () => {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; }
+    catch { db = null; }
+    if (!db) { mode = "local"; return; }
+    mode = "db";
+    db.doc("settings/profile").onSnapshot(snap => {
+      const v = snap.exists ? snap.data() : null;
+      if (v) { profile = { ...profile, ...v }; fillProfileInputs(); render(); }
+      else if (profile.heightIn) saveProfile(); // move a locally saved profile into storage
+    });
+    db.collection("weights").onSnapshot(snap => {
+      const next = {};
+      snap.docs.forEach(doc => {
+        const v = doc.data();
+        if (v && typeof v.lb === "number") next[doc.id] = v.lb;
+      });
+      // one-time carry-over of anything saved in this browser before db was reachable
+      const local = loadLocal();
+      const missing = Object.keys(local).filter(k => !(k in next));
+      if (missing.length) {
+        missing.forEach(k => { next[k] = local[k]; writeDb(k, local[k]); });
+      }
+      try { localStorage.removeItem(LS_KEY); } catch {}
+      entries = next;
+      render();
+    }, () => {
+      mode = "local";
+      setStatus("Couldn't reach saved data. New weigh-ins will be kept in this browser for now.", true);
+    });
+  })();
+
+  async function writeDb(key, value) {
+    const ref = db.collection("weights").doc(key);
+    const attempt = () => value == null ? ref.delete() : ref.set({ date: key, lb: value, updatedAt: Date.now() });
+    try { await attempt(); return true; }
+    catch (e) {
+      if (e && e.code === "unavailable") {
+        await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+        try { await attempt(); return true; } catch {}
+      }
+      if (e && e.code === "invalid_argument") setStatus("Only the owner of this page can add weigh-ins.", true);
+      else setStatus("That didn't save. Check your connection and try again.", true);
+      return false;
+    }
+  }
+
+  async function saveEntry(key, value) {
+    const prev = entries[key];
+    if (value == null) delete entries[key]; else entries[key] = value;
+    render();
+    if (mode === "db") {
+      const ok = await writeDb(key, value);
+      if (!ok) { if (prev == null) delete entries[key]; else entries[key] = prev; render(); }
+      return ok;
+    }
+    if (!saveLocal()) { setStatus("This browser won't store data, so the weigh-in will disappear when you close the page.", true); return false; }
+    return true;
+  }
+
+  // ---------- form ----------
+  $("entry").addEventListener("submit", async e => {
+    e.preventDefault();
+    const key = $("date").value;
+    const v = parseFloat($("weight").value);
+    if (!key) { setStatus("Pick a date for this weigh-in.", true); return; }
+    if (!isFinite(v) || v < 50 || v > 700) { setStatus("Enter a weight between 50 and 700 lb.", true); return; }
+    const rounded = Math.round(v * 10) / 10;
+    const replacing = key in entries;
+    const ok = await saveEntry(key, rounded);
+    if (ok) {
+      $("weight").value = "";
+      // move to the next day
+      const nextKey = shiftDate(key, 1);
+      $("date").value = nextKey;
+      setStatus(`${replacing ? "Updated" : "Saved"} ${lb(rounded)} lb for ${fmtLong(parse(key))}. Next up: ${fmtLong(parse(nextKey))}.`);
+    }
+  });
+
+  // ---------- data shaping ----------
+  function dailySeries() {
+    return Object.keys(entries).sort().map(k => ({ x: parse(k), y: entries[k], key: k }));
+  }
+  function weeklySeries(daily) {
+    const groups = new Map();
+    daily.forEach(p => {
+      const wk = iso(monday(p.x));
+      if (!groups.has(wk)) groups.set(wk, []);
+      groups.get(wk).push(p.y);
+    });
+    return [...groups.keys()].sort().map(k => {
+      const vals = groups.get(k);
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      return { x: parse(k), y: mean, n: vals.length, key: k };
+    });
+  }
+
+  // ---------- chart ----------
+  function niceStep(range, target) {
+    const raw = range / target;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+
+  function drawChart(container, readout, pts, opts) {
+    const measured = container.clientWidth;
+    container.style.minHeight = container.offsetHeight + "px";
+    container.innerHTML = "";
+    readout.textContent = "";
+    if (!pts.length) {
+      container.innerHTML = `<div class="empty">${opts.empty}</div>`;
+      container.style.minHeight = "";
+      return;
+    }
+    const W = Math.max(300, measured || 600);
+    const H = W < 480 ? 220 : 260;
+    const m = { t: 12, r: 14, b: 28, l: 44 };
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+
+    let x0 = pts[0].x.getTime(), x1 = pts[pts.length - 1].x.getTime();
+    const DAY = 864e5;
+    if (x1 - x0 < 6 * DAY) { const mid = (x0 + x1) / 2; x0 = mid - 3.5 * DAY; x1 = mid + 3.5 * DAY; }
+    const edge = 26; // px kept free at both ends so centered date labels fit
+
+    let ymin = Math.min(...pts.map(p => p.y)), ymax = Math.max(...pts.map(p => p.y));
+    if (ymax - ymin < 2) { const mid = (ymin + ymax) / 2; ymin = mid - 1; ymax = mid + 1; }
+    const step = niceStep(ymax - ymin, 4);
+    ymin = Math.floor(ymin / step) * step; ymax = Math.ceil(ymax / step) * step;
+
+    const sx = t => m.l + edge + (t - x0) / (x1 - x0) * (iw - 2 * edge);
+    const sy = v => m.t + (1 - (v - ymin) / (ymax - ymin)) * ih;
+
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", opts.aria(pts));
+    const el = (tag, attrs, parent = svg) => {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      parent.appendChild(n); return n;
+    };
+
+    // y grid + labels
+    const decimals = step < 1 ? 1 : 0;
+    for (let v = ymin; v <= ymax + step / 2; v += step) {
+      const y = sy(v);
+      el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: "var(--rule)", "stroke-width": 1 });
+      const t = el("text", { x: m.l - 8, y: y + 4, "text-anchor": "end", "font-size": 11, fill: "var(--muted)" });
+      t.textContent = v.toFixed(decimals);
+    }
+    // x labels: centered under the data points, thinned so they never overlap
+    const minGap = 52;
+    const labelled = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const px = sx(pts[i].x.getTime());
+      if (!labelled.length || labelled[labelled.length - 1].px - px >= minGap) labelled.push({ p: pts[i], px });
+    }
+    labelled.forEach(({ p, px }) => {
+      el("line", { x1: px, x2: px, y1: m.t + ih, y2: m.t + ih + 4, stroke: "var(--muted)", "stroke-width": 1 });
+      const lab = el("text", { x: px, y: H - 8, "text-anchor": "middle", "font-size": 11, fill: "var(--muted)" });
+      lab.textContent = fmtShort(p.x);
+    });
+
+    // line
+    if (pts.length > 1) {
+      const d = pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x.getTime()).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+      el("path", { d, fill: "none", stroke: opts.color, "stroke-width": opts.lineWidth, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    }
+    // dots
+    const r = pts.length > 90 ? 2 : opts.dot;
+    pts.forEach(p => el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: opts.color }));
+
+    // hover / tap readout
+    const guide = el("line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", opacity: 0 });
+    const ring = el("circle", { r: r + 4, fill: "none", stroke: opts.color, "stroke-width": 2, opacity: 0 });
+    const hit = el("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" });
+    const show = p => {
+      const cx = sx(p.x.getTime()), cy = sy(p.y);
+      guide.setAttribute("x1", cx); guide.setAttribute("x2", cx); guide.setAttribute("opacity", .6);
+      ring.setAttribute("cx", cx); ring.setAttribute("cy", cy); ring.setAttribute("opacity", 1);
+      setReadout(p);
+    };
+    function setReadout(p) {
+      readout.textContent = opts.describe(p);
+      if (opts.action) readout.append(" ", opts.action(p));
+    }
+    const nearest = evt => {
+      const rect = svg.getBoundingClientRect();
+      const px = (evt.clientX - rect.left) * (W / rect.width);
+      let best = pts[0], bd = Infinity;
+      pts.forEach(p => { const dd = Math.abs(sx(p.x.getTime()) - px); if (dd < bd) { bd = dd; best = p; } });
+      return best;
+    };
+    hit.addEventListener("pointermove", e => show(nearest(e)));
+    hit.addEventListener("pointerdown", e => show(nearest(e)));
+    hit.addEventListener("click", e => show(nearest(e)));
+
+    container.appendChild(svg);
+    container.style.minHeight = "";
+    show(pts[pts.length - 1]);
+  }
+
+  function deleteButton(p) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "del"; b.textContent = "Delete";
+    b.setAttribute("aria-label", `Delete weigh-in for ${fmtLong(p.x)}`);
+    let armed = false, timer;
+    b.addEventListener("click", async e => {
+      e.stopPropagation();
+      if (!armed) {
+        armed = true;
+        b.textContent = "Tap again to delete";
+        b.classList.add("armed");
+        timer = setTimeout(() => { armed = false; b.textContent = "Delete"; b.classList.remove("armed"); }, 4000);
+        return;
+      }
+      clearTimeout(timer);
+      b.disabled = true;
+      if (await saveEntry(p.key, null)) {
+        // mirror of saving: step the date back one day
+        const cur = $("date").value || iso(new Date());
+        const prevKey = shiftDate(cur, -1);
+        $("date").value = prevKey;
+        setStatus(`Deleted ${lb(p.y)} lb from ${fmtLong(p.x)}. Date moved back to ${fmtLong(parse(prevKey))}.`);
+      }
+      else b.disabled = false;
+    });
+    return b;
+  }
+
+  // ---------- render ----------
+  // ---------- profile ----------
+  function fillProfileInputs() {
+    if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mSet")) return;
+    if (profile.heightIn) { $("hFt").value = Math.floor(profile.heightIn / 12); $("hIn").value = +(profile.heightIn % 12).toFixed(1); }
+    $("age").value = profile.age || "";
+  }
+  async function saveProfile() {
+    try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch {}
+    if (mode === "db" && db) { try { await db.doc("settings/profile").set({ heightIn: profile.heightIn, age: profile.age }); } catch {} }
+  }
+  let profTimer;
+  ["hFt", "hIn", "age"].forEach(id => $(id).addEventListener("input", () => {
+    const ft = parseFloat($("hFt").value), inch = parseFloat($("hIn").value) || 0, age = parseInt($("age").value, 10);
+    profile = { ...profile, heightIn: isFinite(ft) && ft > 0 ? ft * 12 + inch : null, age: isFinite(age) && age > 0 ? age : profile.age };
+    render();
+    clearTimeout(profTimer); profTimer = setTimeout(saveProfile, 600);
+  }));
+  fillProfileInputs();
+  window.addEventListener("food-updated", () => render());
+
+  // ---------- maintenance estimate ----------
+
+  function maintenanceFromData(daily) {
+    if (!daily.length) return { ok: false, weighins: 0, foodDays: 0, span: 0 };
+    const endKey = daily[daily.length - 1].key;
+    const end = dayNum(endKey), start = end - (WINDOW_DAYS - 1);
+    const w = daily.filter(p => dayNum(p.key) >= start);
+    const kc = window.appShared && window.appShared.kcal || {};
+    const foodKeys = Object.keys(kc).filter(k => { const n = dayNum(k); return n >= start && n <= end && kc[k] > 0; });
+    const span = w.length ? dayNum(w[w.length - 1].key) - dayNum(w[0].key) + 1 : 0;
+    const res = { ok: false, weighins: w.length, foodDays: foodKeys.length, span };
+    if (w.length < MIN_WEIGHINS || span < MIN_SPAN_DAYS || foodKeys.length < MIN_FOOD_DAYS) return res;
+    // trend of weight over the window (least squares), in lb per day
+    const xs = w.map(p => dayNum(p.key)), ys = w.map(p => p.y);
+    const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    let num = 0, den = 0;
+    xs.forEach((x, i) => { num += (x - mx) * (ys[i] - my); den += (x - mx) ** 2; });
+    const slope = den ? num / den : 0;
+    const avgKcal = foodKeys.reduce((a, k) => a + kc[k], 0) / foodKeys.length;
+    // ~3,500 kcal per pound of body weight change
+    return { ...res, ok: true, avgKcal, lbPerWeek: slope * 7, maintenance: avgKcal - slope * 3500, days: span };
+  }
+
+  function formulaEstimate(latestLb) {
+    if (!profile.heightIn || !profile.age || !latestLb) return null;
+    const kg = latestLb * 0.4536, cm = profile.heightIn * 2.54, age = profile.age;
+    const bmr = 10 * kg + 6.25 * cm - 5 * age + 5;   // Mifflin-St Jeor, male
+    return Math.round(bmr * 1.9 / 10) * 10;          // very active: ~2.5 h of training a day
+  }
+
+  function renderMaintenance(daily) {
+    const box = $("mBody"); box.innerHTML = "";
+    $("mSet").hidden = false;
+    const add = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; n.innerHTML = html; box.appendChild(n); return n; };
+    const m = maintenanceFromData(daily);
+    const latest = daily.length ? daily[daily.length - 1].y : null;
+    if (m.ok) {
+      const trend = m.lbPerWeek > 0.05 ? `gaining ${lb(m.lbPerWeek)} lb a week` : m.lbPerWeek < -0.05 ? `losing ${lb(-m.lbPerWeek)} lb a week` : "holding steady";
+      add("span", "kind", "From your results");
+      add("div", "num", `${fmtK(Math.round(m.maintenance / 10) * 10)}<small>kcal a day</small>`);
+      add("p", "", `You averaged <b>${fmtK(m.avgKcal)} kcal</b> a day and were ${trend}.`);
+      add("p", "muted", `Last ${m.days} days, ${m.weighins} weigh-ins, ${m.foodDays} days of food.`);
+      $("mSet").hidden = true;
+      return;
+    }
+    const est = formulaEstimate(latest);
+    if (est) {
+      add("span", "kind", "Starting estimate");
+      add("div", "num", `${fmtK(est)}<small>kcal a day</small>`);
+      add("p", "muted", "A rough formula guess until your own data is ready.");
+    }
+    // days of daily logging still needed before the real estimate
+    const left = Math.max(MIN_WEIGHINS - m.weighins, MIN_FOOD_DAYS - m.foodDays, MIN_SPAN_DAYS - m.span, 0);
+    const pct = Math.round((MIN_SPAN_DAYS - Math.min(left, MIN_SPAN_DAYS)) / MIN_SPAN_DAYS * 100);
+    const wrap = add("div", "prog", "");
+    wrap.innerHTML = `<div>About <b>${left} more day${left === 1 ? "" : "s"}</b> of logging weight and food until your estimate is ready.` +
+      `<div class="bar"><i style="width:${pct}%"></i></div></div>` +
+      `<div class="muted">Weigh-ins ${Math.min(m.weighins, MIN_WEIGHINS)} of ${MIN_WEIGHINS}, food days ${Math.min(m.foodDays, MIN_FOOD_DAYS)} of ${MIN_FOOD_DAYS}, days covered ${Math.min(m.span, MIN_SPAN_DAYS)} of ${MIN_SPAN_DAYS}.</div>`;
+
+  }
+
+  function renderWeekTable(daily, weekly) {
+    const t = $("wkTable"); t.innerHTML = "";
+    if (!weekly.length) { t.innerHTML = `<tr><td class="muted" style="text-align:left;color:var(--muted)">Your weeks will show up here once you log a weigh-in.</td></tr>`; return; }
+    const kc = window.appShared && window.appShared.kcal || {};
+    t.innerHTML = `<thead><tr><th>Week of</th><th>Avg weight</th><th>Change</th><th>Avg calories</th></tr></thead>`;
+    const tb = document.createElement("tbody");
+    [...weekly].reverse().forEach((w, idx, arr) => {
+      const prev = arr[idx + 1];
+      const keys = [...Array(7)].map((_, i) => { const d = new Date(w.x); d.setDate(d.getDate() + i); return iso(d); });
+      const logged = keys.filter(k => kc[k] > 0);
+      const avgK = logged.length ? logged.reduce((a, k) => a + kc[k], 0) / logged.length : null;
+      const diff = prev ? w.y - prev.y : null;
+      const tr = document.createElement("tr");
+      const chg = diff == null ? "<small>first week</small>" : `<span class="${diff > 0.05 ? "up" : diff < -0.05 ? "down" : ""}">${diff > 0 ? "+" : diff < 0 ? "−" : "±"}${lb(Math.abs(diff))} lb</span>`;
+      tr.innerHTML = `<td>${fmtShort(w.x)}</td><td>${lb(w.y)} lb</td><td>${chg}</td>` +
+        `<td>${avgK == null ? "<small>no food logged</small>" : `${fmtK(avgK)} <small>(${logged.length} d)</small>`}</td>`;
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+  }
+
+  function render() {
+    const pageY = window.scrollY, listY = $("list").scrollTop;
+    renderInner();
+    $("list").scrollTop = listY;
+    if (window.scrollY !== pageY) window.scrollTo(0, pageY);
+  }
+
+  function renderInner() {
+    const daily = dailySeries();
+    const weekly = weeklySeries(daily);
+    renderMaintenance(daily);
+    renderWeekTable(daily, weekly);
+
+    // headline
+    if (daily.length) {
+      const last = daily[daily.length - 1];
+      $("now").hidden = false;
+      $("latest").innerHTML = `${lb(last.y)}<small>lb</small>`;
+      let meta = `Last weigh-in ${fmtLong(last.x)}.`;
+      if (weekly.length >= 2) {
+        const a = weekly[weekly.length - 2], b = weekly[weekly.length - 1];
+        const diff = b.y - a.y;
+        const sign = diff > 0 ? "+" : diff < 0 ? "−" : "±";
+        meta += ` This week's average is <b>${lb(b.y)} lb</b>, ${sign}${lb(Math.abs(diff))} lb from last week.`;
+      } else if (weekly.length === 1) {
+        meta += ` This week's average so far is <b>${lb(weekly[0].y)} lb</b>.`;
+      }
+      $("latestMeta").innerHTML = meta;
+    } else {
+      $("now").hidden = true;
+    }
+
+    drawChart($("plot-daily"), $("ro-daily"), daily, {
+      color: "var(--daily)", lineWidth: 1.75, dot: 3.5,
+      empty: "Log your first weigh-in above to start the chart.",
+      describe: p => {
+        const k = kcalOf(p.key);
+        return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged");
+      },
+      action: deleteButton,
+      aria: ps => `Daily weight, ${ps.length} weigh-ins, latest ${lb(ps[ps.length - 1].y)} lb`
+    });
+    drawChart($("plot-weekly"), $("ro-weekly"), weekly, {
+      color: "var(--weekly)", lineWidth: 2.75, dot: 4.5,
+      empty: "Your weekly averages will show up here.",
+      describe: p => {
+        const end = new Date(p.x); end.setDate(end.getDate() + 6);
+        const kc = (window.appShared && window.appShared.kcal) || {};
+        const logged = [...Array(7)].map((_, i) => { const d = new Date(p.x); d.setDate(d.getDate() + i); return iso(d); }).filter(k => kc[k] > 0);
+        const cal = logged.length ? `, ${fmtK(logged.reduce((a, k) => a + kc[k], 0) / logged.length)} kcal a day` : "";
+        return `Week of ${fmtShort(p.x)} to ${fmtShort(end)}: ${lb(p.y)} lb average${cal}`;
+      },
+      aria: ps => `Weekly average weight across ${ps.length} weeks, latest ${lb(ps[ps.length - 1].y)} lb`
+    });
+
+    // history list
+    const list = $("list");
+    list.innerHTML = "";
+    if (!daily.length) { list.innerHTML = `<div class="row"><span class="d">No weigh-ins yet.</span></div>`; }
+    [...daily].reverse().forEach(p => {
+      const row = document.createElement("div"); row.className = "row";
+      const left = document.createElement("div");
+      const d = document.createElement("span"); d.className = "d"; d.textContent = fmtLong(p.x) + "  ";
+      const w = document.createElement("b"); w.textContent = `${lb(p.y)} lb`;
+      left.append(d, w);
+      row.append(left, deleteButton(p));
+      list.appendChild(row);
+    });
+  }
+
+  let rt;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+})();
+</script>
+<script>
+// ================= version =================
+const APP_VERSION = "1.0.0";   // bump this with every release (see CHANGELOG.md in the repository)
+document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
+
+// ================= preferences =================
+window.appPrefs = { glow: true };
+(() => {
+  const LS = "prefs-v1";
+  try { Object.assign(window.appPrefs, JSON.parse(localStorage.getItem(LS) || "{}")); } catch {}
+  let db = null;
+  const announce = () => window.dispatchEvent(new Event("prefs-changed"));
+  window.setPref = async (key, value) => {
+    window.appPrefs[key] = value; announce();
+    try { localStorage.setItem(LS, JSON.stringify(window.appPrefs)); } catch {}
+    if (db) { try { await db.doc("settings/prefs").set({ ...window.appPrefs }); } catch {} }
+  };
+  (async () => {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
+    if (!db) return;
+    db.doc("settings/prefs").onSnapshot(snap => {
+      const v = snap.exists ? snap.data() : null;
+      if (v) { Object.assign(window.appPrefs, v); try { localStorage.setItem(LS, JSON.stringify(window.appPrefs)); } catch {} announce(); }
+    });
+  })();
+})();
+
+// ================= edge glow =================
+// A smooth line with a fading tail, drawn along the rounded screen edge at a steady speed
+// (a little quicker through the corners). Painted on a canvas so thickness and fade are even.
+(() => {
+  const cv = document.getElementById("edgeCanvas"); if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext("2d");
+  const LAP_MS = 36000, RADIUS = 55, CORNER_SPEED = 1.25;
+  const BRIGHTNESS = 0.6;
+  // shows for 20 s every 2 minutes (starting when you open the tracker), fading in and out
+  const CYCLE_MS = 120000, SHOW_MS = 20000, FADE_IN_MS = 2500, FADE_OUT_MS = 3000;
+  let vis = 1;                                    // overall strength of the line and glow   // 55 = iPhone 15 Pro corner radius
+  const CORE = 5, INSET = 3;                                // line thickness, distance from the edge
+  const TAIL_PX = 240, STEP = 1.5;                           // tail length on screen, drawing step
+  let W = 0, H = 0, dpr = 1, pts = [], total = 0, timeAt = [], color = "#2446A8";
+
+  function readColor() {
+    const c = getComputedStyle(document.documentElement).getPropertyValue("--weekly").trim();
+    if (c) color = c;
+  }
+  // sample the rounded-rectangle edge every STEP px, remembering which samples are in a corner
+  function build() {
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const x0 = INSET, y0 = INSET, x1 = W - INSET, y1 = H - INSET;
+    const r = Math.min(RADIUS - INSET, (x1 - x0) / 2, (y1 - y0) / 2);
+    const segs = [
+      { t: "line", a: [x0 + r, y0], b: [x1 - r, y0] },
+      { t: "arc", c: [x1 - r, y0 + r], s: -Math.PI / 2, e: 0 },
+      { t: "line", a: [x1, y0 + r], b: [x1, y1 - r] },
+      { t: "arc", c: [x1 - r, y1 - r], s: 0, e: Math.PI / 2 },
+      { t: "line", a: [x1 - r, y1], b: [x0 + r, y1] },
+      { t: "arc", c: [x0 + r, y1 - r], s: Math.PI / 2, e: Math.PI },
+      { t: "line", a: [x0, y1 - r], b: [x0, y0 + r] },
+      { t: "arc", c: [x0 + r, y0 + r], s: Math.PI, e: Math.PI * 1.5 },
+    ];
+    pts = []; timeAt = []; total = 0;
+    let t = 0;
+    for (const sg of segs) {
+      const len = sg.t === "line" ? Math.hypot(sg.b[0] - sg.a[0], sg.b[1] - sg.a[1]) : r * (sg.e - sg.s);
+      const n = Math.max(1, Math.round(len / STEP));
+      for (let k = 0; k < n; k++) {
+        const f = k / n;
+        const p = sg.t === "line" ? [sg.a[0] + (sg.b[0] - sg.a[0]) * f, sg.a[1] + (sg.b[1] - sg.a[1]) * f]
+          : [sg.c[0] + r * Math.cos(sg.s + (sg.e - sg.s) * f), sg.c[1] + r * Math.sin(sg.s + (sg.e - sg.s) * f)];
+        pts.push(p); timeAt.push(t);
+        t += (len / n) / (sg.t === "arc" ? CORNER_SPEED : 1);
+      }
+    }
+    total = t; readColor();
+  }
+  // which sample the head is on, for a fraction of the lap (time-weighted, so corners are a bit quicker)
+  function headIndex(frac) {
+    const target = frac * total;
+    let lo = 0, hi = timeAt.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (timeAt[mid] <= target) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+  function draw(frac) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const n = pts.length; if (!n) return;
+    const head = headIndex(frac), tailN = Math.round(TAIL_PX / STEP);
+    // trim everything to the rounded screen shape so the glow is equally wide on edges and corners
+    ctx.save();
+    ctx.beginPath();
+    const R = RADIUS;
+    ctx.moveTo(R, 0); ctx.lineTo(W - R, 0); ctx.arc(W - R, R, R, -Math.PI / 2, 0);
+    ctx.lineTo(W, H - R); ctx.arc(W - R, H - R, R, 0, Math.PI / 2);
+    ctx.lineTo(R, H); ctx.arc(R, H - R, R, Math.PI / 2, Math.PI);
+    ctx.lineTo(0, R); ctx.arc(R, R, R, Math.PI, Math.PI * 1.5);
+    ctx.closePath(); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineCap = "butt"; ctx.lineJoin = "round";
+    // soft glow first (wide and faint), then the crisp core; both fade smoothly toward the tail end
+    for (const [width, strength] of [[28, 0.045], [23, 0.055], [18, 0.07], [13, 0.09], [9, 0.14], [CORE, 1]]) {
+      ctx.lineWidth = width;
+      for (let j = tailN - 1; j >= 0; j--) {
+        const a = pts[((head - j) % n + n) % n], b = pts[((head - j - 1) % n + n) % n];
+        const fade = Math.pow(1 - j / tailN, 1.8);
+        ctx.globalAlpha = strength * fade * BRIGHTNESS * vis;
+        ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.lineTo(a[0], a[1]); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  build();
+  window.addEventListener("resize", () => { build(); });
+  if (window.matchMedia) {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(readColor);
+  }
+  const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const clear = () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); };
+  const ease = x => x * x * (3 - 2 * x);
+  function visibility(t) {
+    const c = t % CYCLE_MS;
+    if (c >= SHOW_MS) return 0;
+    if (c < FADE_IN_MS) return ease(c / FADE_IN_MS);
+    if (c > SHOW_MS - FADE_OUT_MS) return ease((SHOW_MS - c) / FADE_OUT_MS);
+    return 1;
+  }
+  let start = 0, run = 0, sleepTimer = null;   // `run` changes on every on/off so old loops stop
+  const tick = (id, now) => {
+    if (id !== run) return;
+    const t = now - start;
+    vis = visibility(t);
+    if (vis <= 0) {
+      // hidden: clear once and sleep until the next appearance instead of drawing every frame
+      clear();
+      sleepTimer = setTimeout(() => requestAnimationFrame(n => tick(id, n)), CYCLE_MS - (t % CYCLE_MS));
+      return;
+    }
+    draw((t % LAP_MS) / LAP_MS);
+    requestAnimationFrame(n => tick(id, n));
+  };
+  function apply() {
+    const on = window.appPrefs.glow !== false;
+    run++; clearTimeout(sleepTimer); clear();
+    if (!on) return;
+    if (reduced) { vis = 0.6; draw(0.08); return; }
+    start = performance.now();                 // turning it on shows it right away
+    const id = run; requestAnimationFrame(n => tick(id, n));
+  }
+  let lastOn = null;
+  window.addEventListener("prefs-changed", () => { const on = window.appPrefs.glow !== false; if (on !== lastOn) { lastOn = on; apply(); } });
+  lastOn = window.appPrefs.glow !== false; apply();
+})();
+
+// ================= settings panel =================
+(() => {
+  const $ = id => document.getElementById(id);
+  const back = $("setBack"), sheet = $("setSheet");
+  let armed = false;
+  function open() {
+    $("prefGlow").checked = window.appPrefs.glow !== false;
+    back.hidden = false; sheet.hidden = false; armed = false;
+    requestAnimationFrame(() => { back.classList.add("show"); sheet.classList.add("show"); });
+    $("setDone").focus({ preventScroll: true });
+  }
+  function close() {
+    back.classList.remove("show"); sheet.classList.remove("show");
+    setTimeout(() => { back.hidden = true; sheet.hidden = true; }, 260);
+    $("openSettings").focus({ preventScroll: true });
+  }
+  $("openSettings").addEventListener("click", open);
+  $("setDone").addEventListener("click", close);
+  back.addEventListener("pointerdown", () => { armed = true; });
+  back.addEventListener("click", () => { if (armed) close(); armed = false; });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheet.hidden) close(); });
+  $("prefGlow").addEventListener("change", e => window.setPref("glow", e.target.checked));
+  window.addEventListener("prefs-changed", () => { $("prefGlow").checked = window.appPrefs.glow !== false; });
+})();
+
+// ================= tabs =================
+(() => {
+  const tabs = { weight: document.getElementById("tab-weight"), food: document.getElementById("tab-food") };
+  const panes = { weight: document.getElementById("pane-weight"), food: document.getElementById("pane-food") };
+  const bar = document.querySelector(".tabs"), pill = document.querySelector(".tab-pill");
+  let current = "weight";
+  function placePill() {
+    const b = tabs[current];
+    pill.style.width = b.offsetWidth + "px";
+    pill.style.transform = `translateX(${b.offsetLeft}px)`;
+  }
+  function show(name) {
+    current = name;
+    for (const k in tabs) {
+      tabs[k].setAttribute("aria-selected", String(k === name));
+      panes[k].hidden = k !== name;
+    }
+    placePill();
+    try { localStorage.setItem("log-tab", name); } catch {}
+    // charts measure their width, so redraw once the pane is visible
+    window.dispatchEvent(new Event("resize"));
+  }
+  tabs.weight.addEventListener("click", () => show("weight"));
+  tabs.food.addEventListener("click", () => show("food"));
+  let start = "weight";
+  try { start = localStorage.getItem("log-tab") || "weight"; } catch {}
+  show(start === "food" ? "food" : "weight");
+  // place the pill without animating, then enable the glide for later switches
+  requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("no-anim")));
+  window.addEventListener("resize", placePill);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+})();
+
+// ================= food =================
+(() => {
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, "0");
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const shift = (key, n) => { const d = parse(key); d.setDate(d.getDate() + n); return iso(d); };
+  const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const r0 = v => Math.round(v);
+  const OZ_PER_G = 1 / 28.3495;
+
+  // Every food is stored by weight: `per` is macros per gram, and `units` says how many
+  // grams one gram / ounce / pound / cup is. Cups need to know what a cup of that food weighs.
+  const G = { g: 1, oz: 28.3495, lb: 453.592 };
+  const UNIT_ORDER = ["each", "g", "oz", "lb", "cup", "tbsp"];
+  const UNIT_NAME = { g: "grams", oz: "ounces", lb: "pounds", cup: "cups", tbsp: "tablespoons", each: "whole" };
+  const VOL = { cup: 1, tbsp: 1 / 16 };   // volume units, as a share of one cup
+  // `each` is the weight of one whole, medium-sized item (only for foods that come whole)
+  const unitsWith = (cup, each) => ({ ...G, ...(cup > 0 ? { cup, tbsp: cup / 16 } : {}), ...(each > 0 ? { each } : {}) });
+  const ALL_UNITS = { ...G, cup: 1, tbsp: 1 };
+  const OIL_G_PER_TBSP = 13.5;
+  const DEFAULT_OIL_TBSP = 1;
+  const mk = (id, name, detail, per100, gPerCup, def, cooked) => ({
+    id, name, detail, base: "g",
+    units: unitsWith(gPerCup),
+    per: { kcal: per100[0] / 100, p: per100[1] / 100, c: per100[2] / 100, f: per100[3] / 100 },
+    def, ...(cooked ? { cooked: true } : {}),
+  });
+  const DEFAULT_FOODS = [
+    mk("banana", "Banana", "", [89, 1.1, 22.9, 0.3], 150, { amount: 118, unit: "g" }),
+    mk("beef", "85/15 ground beef", "", [215, 18.7, 0, 15.2], 225, { amount: 8, unit: "oz" }, true),
+    mk("rice", "White rice", "", [130, 2.7, 28.2, 0.3], 158, { amount: 1, unit: "cup" }),
+    mk("chicken", "Chicken thighs", "", [120, 19.8, 0, 4.2], 140, { amount: 1.5, unit: "lb" }, true),
+    mk("shrimp", "Shrimp", "", [85, 20.1, 0, 0.4], 145, { amount: 8, unit: "oz" }, true),
+    mk("salsa", "Homemade salsa", "", [27, 1, 5.7, 0.2], 240, { amount: 1.25, unit: "cup" }),
+    mk("oil", "Olive oil", "", [884, 0, 0, 100], 216, { amount: 1, unit: "tbsp" }),
+  ];
+
+  // Bring foods saved in the older format (units like "banana", "scoop", "8 oz") into the weight format.
+  const OLD_GRAMS = { banana: 118, serving: 300, tbsp: 13.5, tsp: 4.5, shake: 389 };
+  function normalizeFood(f) {
+    if (f.base === "g" && f.units && f.units.g === 1) {
+      return { ...f, units: unitsWith(f.units.cup, f.units.each) };
+    }
+    const u = f.units || {};
+    const gPerBase = u.g ? 1 / u.g : G[f.base] || OLD_GRAMS[f.base] || 100;
+    const known = DEFAULT_FOODS.find(d => d.id === f.id);
+    const gPerCup = u.cup ? u.cup * gPerBase : (known && known.units.cup) || null;
+    const per = { kcal: f.per.kcal / gPerBase, p: f.per.p / gPerBase, c: f.per.c / gPerBase, f: f.per.f / gPerBase };
+    let def = { amount: +gPerBase.toFixed(1), unit: "g" };
+    if (f.def) {
+      const du = f.def.unit, dAmt = f.def.amount;
+      if (G[du]) def = { amount: dAmt, unit: du };
+      else if (VOL[du] && gPerCup) def = { amount: dAmt, unit: du };
+      else {
+        const grams = dAmt * (u[du] != null ? u[du] * gPerBase : gPerBase);
+        const cups = gPerCup ? grams / gPerCup : 0;
+        def = gPerCup && Math.abs(cups - Math.round(cups * 4) / 4) < 0.02
+          ? { amount: Math.round(cups * 4) / 4, unit: "cup" } : { amount: +grams.toFixed(1), unit: "g" };
+      }
+    }
+    return { ...f, base: "g", units: unitsWith(gPerCup), per, def };
+  }
+  const unitOptions = (sel, units, value) => {
+    sel.innerHTML = "";
+    UNIT_ORDER.filter(u => units[u] != null).forEach(u => { const o = document.createElement("option"); o.value = u; o.textContent = UNIT_NAME[u]; sel.appendChild(o); });
+    sel.value = units[value] != null ? value : "g";
+  };
+
+  let foods = DEFAULT_FOODS.map(f => ({ ...f }));
+  let days = {};            // { "YYYY-MM-DD": [items] }
+  let day = iso(new Date());
+  let db = null, mode = "local";
+  let selected = null;      // food id open in the adder
+  let lastTap = { id: null, t: 0 }, tileRenaming = null;   // double-tap-to-rename state
+  let lastShared = "";      // last calorie map sent to the weight section
+
+  const LS_DAYS = "food-days-v1", LS_FOODS = "food-lib-v1";
+  function loadLocal() {
+    try { days = JSON.parse(localStorage.getItem(LS_DAYS) || "{}") || {}; } catch { days = {}; }
+    try { const f = JSON.parse(localStorage.getItem(LS_FOODS) || "null"); if (Array.isArray(f) && f.length) foods = f.map(normalizeFood); } catch {}
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_DAYS, JSON.stringify(days)); localStorage.setItem(LS_FOODS, JSON.stringify(foods)); return true; }
+    catch { return false; }
+  }
+  function setStatus(msg, err) { const s = $("fStatus"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
+
+  const food = id => foods.find(f => f.id === id);
+  const oilFood = () => food("oil") || DEFAULT_FOODS.find(f => f.id === "oil");
+
+  function macrosFor(f, amount, unit, oilTbsp) {
+    const n = amount * (f.units[unit] ?? 1);                        // grams of food
+    const o = oilFood().per, oil = (oilTbsp || 0) * OIL_G_PER_TBSP;  // grams of oil
+    return {
+      kcal: f.per.kcal * n + o.kcal * oil, p: f.per.p * n + o.p * oil,
+      c: f.per.c * n + o.c * oil, f: f.per.f * n + o.f * oil,
+    };
+  }
+  const fmtAmt = (a, u) => u === "each" ? `${+a.toFixed(2)} whole` : `${+a.toFixed(2)} ${u}`;
+  const MEASURES = ["oz", "lb", "g", "cup", "tbsp", "tsp", "each"];
+  // "0.5 lb 85/15 ground beef" for measured foods, "Protein shake ×2" for counted ones
+  const itemLabel = (i) => MEASURES.includes(i.unit)
+    ? `${fmtAmt(i.amount, i.unit)} ${i.name.toLowerCase()}`
+    : i.amount === 1 ? i.name : `${i.name} ×${+i.amount.toFixed(2)}`;
+
+  // ---------- storage ----------
+  async function withRetry(fn) {
+    try { await fn(); return true; }
+    catch (e) {
+      if (e && e.code === "unavailable") {
+        await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+        try { await fn(); return true; } catch {}
+      }
+      setStatus(e && e.code === "invalid_argument" ? "Only the owner of this page can change the food log." : "That didn't save. Check your connection and try again.", true);
+      return false;
+    }
+  }
+  async function saveDay(key) {
+    if (mode !== "db") return saveLocal();
+    const items = days[key] || [];
+    const ref = db.collection("food").doc(key);
+    return withRetry(() => items.length ? ref.set({ date: key, items }) : ref.delete());
+  }
+  async function saveFoods() {
+    if (mode !== "db") return saveLocal();
+    return withRetry(() => db.doc("settings/foods").set({ foods }));
+  }
+
+  loadLocal();
+  render();
+
+  (async () => {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
+    if (!db) return;
+    mode = "db";
+    const localDays = { ...days }, localFoods = foods;
+    let firstDays = true, firstFoods = true;
+    db.collection("food").onSnapshot(snap => {
+      const next = {};
+      snap.docs.forEach(d => { const v = d.data(); if (v && Array.isArray(v.items)) next[d.id] = v.items; });
+      if (firstDays) {
+        firstDays = false;
+        Object.keys(localDays).forEach(k => { if (!(k in next) && localDays[k].length) { next[k] = localDays[k]; days = next; saveDay(k); } });
+        try { localStorage.removeItem(LS_DAYS); } catch {}
+      }
+      days = next; render();
+    }, () => { mode = "local"; setStatus("Couldn't reach saved food data. Changes will be kept in this browser for now.", true); });
+    db.doc("settings/foods").onSnapshot(snap => {
+      const v = snap.exists ? snap.data() : null;
+      if (v && Array.isArray(v.foods) && v.foods.length) foods = v.foods.map(normalizeFood);
+      else if (firstFoods && localFoods !== foods) {/* keep */}
+      if (firstFoods) { firstFoods = false; try { localStorage.removeItem(LS_FOODS); } catch {} }
+      render();
+    });
+  })();
+
+  // ---------- day navigation ----------
+  $("fPrev").addEventListener("click", () => { releaseSpacer(); day = shift(day, -1); closeAdder(); render(); });
+  $("fNext").addEventListener("click", () => { releaseSpacer(); day = shift(day, 1); closeAdder(); render(); });
+
+  // ---------- adder ----------
+  // ---------- rename from the log panel ----------
+  let renaming = false;
+  function startRename() {
+    const f = food(selected); if (!f) return;
+    renaming = true;
+    $("aName").hidden = true; $("aRename").hidden = true;
+    const inp = $("aNameInput"); inp.hidden = false; inp.value = f.name;
+    inp.focus(); inp.select();
+  }
+  async function endRename(save) {
+    if (!renaming) { $("aName").hidden = false; $("aRename").hidden = false; $("aNameInput").hidden = true; return; }
+    renaming = false;
+    const f = food(selected), name = $("aNameInput").value.trim();
+    $("aNameInput").hidden = true; $("aName").hidden = false; $("aRename").hidden = false;
+    if (!save || !f || !name || name === f.name) return;
+    const before = foods;
+    foods = foods.map(x => x.id === f.id ? { ...x, name } : x);
+    $("aName").textContent = name;
+    render();
+    if (await saveFoods()) setStatus(`Renamed to ${name}.`);
+    else { foods = before; $("aName").textContent = f.name; render(); }
+  }
+  $("aRename").addEventListener("click", startRename);
+
+  $("aNameInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); endRename(true); }
+    else if (e.key === "Escape") { e.preventDefault(); endRename(false); }
+  });
+  $("aNameInput").addEventListener("blur", () => endRename(true));
+
+  function openAdder(id) {
+    const f = food(id); if (!f) return;
+    $("newPanel").hidden = true; $("editPanel").hidden = true; editing = null;
+    selected = id;
+    $("adder").hidden = false;
+    $("aName").textContent = f.name;
+    endRename(false);
+    const sel = $("aUnit");
+    unitOptions(sel, { ...f.units, cup: f.units.cup || 0, tbsp: f.units.tbsp || 0 }, f.def ? f.def.unit : "g");
+    sel.dataset.prev = sel.value;
+    $("aAmt").value = f.def ? f.def.amount : 1;
+    $("aOilWrap").hidden = !f.cooked;
+    $("aOil").value = f.cooked ? DEFAULT_OIL_TBSP : 0;
+    updatePreview();
+    renderQuick();
+  }
+  function closeAdder() { selected = null; $("adder").hidden = true; renderQuick(); }
+  function readAdder() {
+    const f = food(selected); if (!f) return null;
+    const amount = parseFloat($("aAmt").value);
+    const unit = $("aUnit").value;
+    const oil = f.cooked ? Math.max(0, parseFloat($("aOil").value) || 0) : 0;
+    return { f, amount, unit, oil };
+  }
+  function updatePreview() {
+    const r = readAdder(); if (!r) return;
+    if (!isFinite(r.amount) || r.amount <= 0) { $("aPrev").textContent = "Enter an amount."; return; }
+    if (VOL[r.unit] && !(r.f.units[r.unit] > 0)) { $("aPrev").textContent = `To log this in ${UNIT_NAME[r.unit]}, press and hold the food, tap Edit, and fill in Grams in 1 cup.`; return; }
+    const m = macrosFor(r.f, r.amount, r.unit, r.oil);
+    $("aPrev").innerHTML = `<b>${r0(m.kcal)} kcal</b>, ${r0(m.p)} g protein, ${r0(m.c)} g carbs, ${r0(m.f)} g fat` +
+      (r.oil ? ` (includes ${+r.oil.toFixed(2)} tbsp olive oil)` : r.f.cooked ? " (no cooking oil)" : "");
+  }
+  ["aAmt", "aUnit", "aOil"].forEach(id => $(id).addEventListener("input", updatePreview));
+  $("aUnit").addEventListener("change", () => {
+    // keep the same quantity when switching units, e.g. 8 oz -> 0.5 lb
+    const f = food(selected); if (!f) return;
+    const prev = $("aUnit").dataset.prev || "g";
+    const a = parseFloat($("aAmt").value);
+    if (isFinite(a) && f.units[prev] > 0 && f.units[$("aUnit").value] > 0) {
+      const conv = a * f.units[prev] / f.units[$("aUnit").value];
+      $("aAmt").value = +conv.toFixed(conv < 1 ? 3 : conv < 10 ? 2 : 0);
+    }
+    $("aUnit").dataset.prev = $("aUnit").value;
+    updatePreview();
+  });
+  $("aUnit").addEventListener("focus", () => { $("aUnit").dataset.prev = $("aUnit").value; });
+  $("aCancel").addEventListener("click", closeAdder);
+  // Keep an element at the same spot on screen while the page changes around it
+  // (panels closing, the keyboard going away, lists re-rendering).
+  function holdInPlace(anchor, change) {
+    const top0 = anchor.getBoundingClientRect().top;
+    const pane = $("pane-food");
+    const settle = () => {
+      const d = anchor.getBoundingClientRect().top - top0;
+      if (Math.abs(d) < 1) return;
+      // make sure the page is tall enough to scroll to where we need to be
+      const need = window.scrollY + d + window.innerHeight - document.documentElement.scrollHeight;
+      if (need > 0) pane.style.paddingBottom = (parseFloat(pane.style.paddingBottom) || 0) + need + "px";
+      window.scrollBy(0, d);
+    };
+    const r = change();
+    settle();
+    requestAnimationFrame(() => { settle(); requestAnimationFrame(settle); });
+    setTimeout(settle, 350);   // after the phone's keyboard finishes closing
+    return r;
+  }
+  function releaseSpacer() { $("pane-food").style.paddingBottom = ""; }
+  // shrink that extra bottom space as soon as it's no longer needed to hold your position
+  window.addEventListener("scroll", () => {
+    const pane = $("pane-food"), pad = parseFloat(pane.style.paddingBottom) || 0;
+    if (!pad) return;
+    const spare = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    if (spare > 0) pane.style.paddingBottom = Math.max(0, pad - spare) + "px";
+  }, { passive: true });
+
+  $("aAdd").addEventListener("click", async () => {
+    const r = readAdder(); if (!r) return;
+    if (!isFinite(r.amount) || r.amount <= 0) { setStatus("Enter an amount greater than zero.", true); return; }
+    if (VOL[r.unit] && !(r.f.units[r.unit] > 0)) { setStatus("This food doesn't have a cup weight yet. Pick grams, ounces, or pounds, or add Grams in 1 cup under Edit.", true); return; }
+    const m = macrosFor(r.f, r.amount, r.unit, r.oil);
+    const item = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      food: r.f.id, name: r.f.name, amount: r.amount, unit: r.unit, oil: r.oil,
+      kcal: +m.kcal.toFixed(1), p: +m.p.toFixed(1), c: +m.c.toFixed(1), f: +m.f.toFixed(1),
+    };
+    const key = day;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    holdInPlace($("quick"), () => {
+      days[key] = [...(days[key] || []), item];
+      render(); closeAdder();
+      setStatus(`Added ${itemLabel({ amount: r.amount, unit: r.unit, name: r.f.name })}.`);
+    });
+    if (!(await saveDay(key))) { days[key] = days[key].filter(i => i.id !== item.id); render(); }
+  });
+
+  // ---------- copy previous day ----------
+  $("fCopy").addEventListener("click", async () => {
+    const src = days[shift(day, -1)] || [];
+    if (!src.length) return;
+    const key = day;
+    days[key] = src.map(i => ({ ...i, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }));
+    render();
+    if (await saveDay(key)) setStatus(`Copied ${src.length} item${src.length === 1 ? "" : "s"} from the day before.`);
+    else { days[key] = []; render(); }
+  });
+
+  // ---------- scan a nutrition label ----------
+  // Two ways to read a label:
+  //  1. Claude looks at the photo directly (where this view can send images).
+  //  2. Otherwise the photo is read into text on the phone, and Claude (or, failing that,
+  //     a built-in check) turns the text into numbers.
+  const OCR_CORE = "/_blob/REPLACE_WITH_OCR_CORE_ID";
+  const OCR_DATA = "/_blob/REPLACE_WITH_OCR_DATA_ID";
+  const OCR_CORE_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-lstm.wasm.js";
+  let sampler = null, imgCaps = null, scanning = false;
+  const scanReady = (async () => {
+    try { sampler = window.claude && window.claude.use ? await window.claude.use("sample") : null; } catch { sampler = null; }
+    if (!sampler) return;
+    try { const lim = await sampler.limits(); imgCaps = lim && lim.images; } catch { imgCaps = null; }
+  })();
+  function scanBlocked(e) { if (!scanning) return false; e.preventDefault(); return true; }
+  ["scanBtn", "npRescan", "scanTop"].forEach(id => {
+    $(id).addEventListener("click", scanBlocked);
+    $(id).addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!scanBlocked(e)) $("scanFile").click(); } });
+  });
+
+  // --- on-phone text reader (loaded the first time you scan) ---
+  let ocrEngine = null;
+  const loadScript = src => new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = src; s.async = true;
+    s.onload = res; s.onerror = () => rej(new Error("load " + src)); document.head.appendChild(s);
+  });
+  async function getOcr() {
+    if (ocrEngine) return ocrEngine;
+    ocrEngine = (async () => {
+      if (typeof TesseractCore === "undefined") await loadScript(OCR_CORE).catch(() => loadScript(OCR_CORE_CDN));
+      if (!window.__OCR_ENG_GZ) await loadScript(OCR_DATA);
+      const bin = atob(window.__OCR_ENG_GZ);
+      const gz = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) gz[i] = bin.charCodeAt(i);
+      if (typeof DecompressionStream === "undefined") throw new Error("no-decompress");
+      const raw = new Uint8Array(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+      const M = await TesseractCore();
+      M.FS.writeFile("./eng.traineddata", raw);
+      const api = new M.TessBaseAPI();
+      if (api.Init(null, "eng") !== 0) throw new Error("init");
+      return { M, api };
+    })();
+    try { return await ocrEngine; } catch (e) { ocrEngine = null; throw e; }
+  }
+  async function photoToPng(file) {
+    // shrink big phone photos and turn them grey; clearer and faster to read
+    let src;
+    try { src = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch {
+      src = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+    }
+    const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight;
+    const scale = Math.min(1, 2000 / Math.max(w0, h0));
+    const c = document.createElement("canvas"); c.width = Math.round(w0 * scale); c.height = Math.round(h0 * scale);
+    const g = c.getContext("2d"); g.filter = "grayscale(1) contrast(1.3)"; g.drawImage(src, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+  async function readText(file) {
+    const { M, api } = await getOcr();
+    const png = await photoToPng(file);
+    await new Promise(r => setTimeout(r, 30)); // let "Reading label..." show before the phone gets busy
+    M.FS.writeFile("/input", png);
+    api.SetImageFile(1, 0);
+    api.Recognize(null);
+    return api.GetUTF8Text() || "";
+  }
+
+  // --- built-in fallback: pull numbers out of the text, fixing common misreads ---
+  function parseLabel(text) {
+    const t = text.replace(/\bO(?=\s*m?g\b)/g, "0").replace(/[|]/g, " ");
+    const lineNum = re => { const m = t.match(re); return m ? m[1] : null; };
+    // candidates for a gram amount: "23g" -> 23; "239" (g misread as 9) -> 239 or 23
+    const cands = tok => {
+      if (tok == null) return [0];
+      const s = tok.replace(",", ".");
+      const m = s.match(/^(\d+(?:\.\d+)?)(g|9)?/);
+      if (!m) return [0];
+      const out = [parseFloat(m[1])];
+      if (!m[2] && /9$/.test(m[1]) && m[1].length > 1) out.push(parseFloat(m[1].slice(0, -1)));
+      if (m[2] === "9") out.push(parseFloat(m[1]));
+      if (/^(\d)\1g/.test(s)) out.push(parseFloat(s[0]));   // "99g" -> 9
+      return [...new Set(out)];
+    };
+    const kcal = parseFloat(lineNum(/Calories[^\d]{0,12}(\d{1,4})/i) || "0");
+    const fat = cands(lineNum(/Total\s*Fat[^\d]{0,6}(\d[\d.,]*\s*[g9]?)/i));
+    const carb = cands(lineNum(/Total\s*Carb\w*[^\d]{0,6}(\d[\d.,]*\s*[g9]?)/i));
+    const prot = cands(lineNum(/Protein[^\d]{0,6}(\d[\d.,]*\s*[g9]?)/i));
+    let best = { p: prot[0], c: carb[0], f: fat[0] }, err = Infinity;
+    for (const p of prot) for (const c of carb) for (const f of fat) {
+      const e = kcal ? Math.abs(4 * p + 4 * c + 9 * f - kcal) : 0;
+      if (e < err) { err = e; best = { p, c, f }; }
+    }
+    const gm = t.match(/\((\d{1,4})\s*([g9])\s*\)/i);
+    let grams = gm ? parseFloat(gm[1]) : null;
+    if (gm && gm[2] === "9") grams = parseFloat(gm[1]);
+    else if (grams && !/g\)/i.test(gm[0]) && String(grams).endsWith("9")) grams = parseFloat(String(grams).slice(0, -1));
+    const sm = t.match(/Serving\s*size\s*([\d\/.\s½¼¾]*)\s*([a-zA-Z]+)/i);
+    const frac = str => {
+      str = (str || "").trim().replace("½", " 1/2").replace("¼", " 1/4").replace("¾", " 3/4");
+      return str.split(/\s+/).filter(Boolean).reduce((a, p) => a + (p.includes("/") ? p.split("/").reduce((x, y) => x / y) : parseFloat(p) || 0), 0);
+    };
+    const r = { name: "", kcal, protein: best.p, carbs: best.c, fat: best.f, servingGrams: grams, gramsPerCup: null };
+    const n = sm ? frac(sm[1]) : 0;
+    if (sm && /^cups?$/i.test(sm[2]) && n > 0) {
+      Object.assign(r, { servingAmount: n, servingUnit: "cup", gramsPerCup: grams ? grams / n : null });
+    } else if (sm && /^(tbsp|tbs|tablespoons?)$/i.test(sm[2]) && n > 0) {
+      Object.assign(r, { servingAmount: n, servingUnit: "tbsp", gramsPerCup: grams ? grams / n * 16 : null });
+    } else if (sm && n > 0 && grams && !/^(g|grams?|oz|ounces?|ml|lb|pounds?)$/i.test(sm[2])) {
+      Object.assign(r, { servingAmount: n, servingUnit: "each", gramsPerWhole: grams / n });   // "1 scoop (46g)" -> 1 whole
+    } else if (grams) Object.assign(r, { servingAmount: grams, servingUnit: "g" });
+    else Object.assign(r, { servingAmount: 100, servingUnit: "g" });
+    return r;
+  }
+
+  // ---------- new food panel ----------
+  const NF = ["nName", "nAmt", "nCup", "nEach", "nK", "nP", "nC", "nF"];
+  let nameSuggestion = "";
+  function acceptSuggestion(e) {
+    const inp = $("nName");
+    if (inp.value || !nameSuggestion) return false;
+    e.preventDefault();
+    inp.value = nameSuggestion;
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    $("nNameHint").hidden = true;
+    return true;
+  }
+  $("nName").addEventListener("beforeinput", e => { if (e.inputType === "insertText" && e.data === " ") acceptSuggestion(e); });
+  $("nName").addEventListener("keydown", e => { if (e.key === " ") acceptSuggestion(e); });
+  $("nName").addEventListener("input", () => { if ($("nName").value) $("nNameHint").hidden = true; });
+  function openNewFood() {
+    nameSuggestion = ""; $("nName").placeholder = "Name this food"; $("nNameHint").hidden = true;
+    closeAdder(); $("editPanel").hidden = true; editing = null;
+    NF.forEach(id => $(id).value = "");
+    unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
+    $("newPanel").hidden = false;
+    $("npStart").hidden = false; $("npForm").hidden = true; $("scanMsg").hidden = true;
+    setStatus("");
+    $("newPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function closeNewFood() { $("newPanel").hidden = true; }
+  function showNewForm(sub) {
+    $("npStart").hidden = true; $("npForm").hidden = false;
+    $("npSub").textContent = sub;
+    if (!$("nUnit").options.length) unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
+    if (!$("nAmt").value) $("nAmt").value = 100;
+  }
+  $("npClose").addEventListener("click", closeNewFood);
+  $("nUnit").addEventListener("change", () => {
+    const g = u => u === "each" ? parseFloat($("nEach").value) || 0 : VOL[u] ? (parseFloat($("nCup").value) || 0) * VOL[u] : G[u];
+    const prev = $("nUnit").dataset.prev || "g", next = $("nUnit").value, a = parseFloat($("nAmt").value);
+    if (isFinite(a) && g(prev) && g(next)) {
+      const conv = a * g(prev) / g(next);
+      $("nAmt").value = +conv.toFixed(conv < 1 ? 3 : conv < 10 ? 2 : 0);
+    } else if (next === "each" && !g(next)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("nEach").focus(); }
+    else if (VOL[next] && !g(next)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("nCup").focus(); }
+    $("nUnit").dataset.prev = next;
+  });
+  $("npManual").addEventListener("click", () => { $("npRescan").hidden = true; showNewForm("Enter the numbers from the label."); });
+  $("manualTop").addEventListener("click", () => { openNewFood(); $("npRescan").hidden = true; showNewForm("Enter the food's name, serving, and numbers."); $("nName").focus({ preventScroll: true }); });
+
+  const LABEL_JSON = [
+    "Return ONLY a JSON object, no other text.",
+    "Shape: {\"name\": string, \"servingAmount\": number, \"servingUnit\": \"g\" | \"oz\" | \"lb\" | \"cup\" | \"tbsp\" | \"each\", \"servingGrams\": number or null, \"gramsPerCup\": number or null, \"gramsPerWhole\": number or null, \"kcal\": number, \"protein\": number, \"carbs\": number, \"fat\": number}.",
+    "kcal, protein, carbs and fat are for one label serving, as printed.",
+    "If the serving is a countable item (e.g. \"1 scoop (46g)\", \"1 bar (60g)\", \"1 egg\", \"2 cookies (30g)\"), use servingUnit \"each\", servingAmount = the count, and gramsPerWhole = the weight of ONE item.",
+    "Otherwise the serving must be expressed ONLY in grams, ounces (weight), pounds, cups, or tablespoons. If the label's serving is given in cups (e.g. \"2/3 cup (55g)\"), use servingUnit \"cup\" and servingAmount 0.667. If it's in tablespoons (e.g. \"2 Tbsp (32g)\"), use servingUnit \"tbsp\" and servingAmount 2. For anything else (e.g. \"4 oz (112g)\") use servingUnit \"g\" with servingAmount equal to the grams.",
+    "servingGrams is the serving's weight in grams. gramsPerCup is how many grams one cup of this food weighs: work it out from the label when the serving is in cups or tablespoons (16 tablespoons = 1 cup), otherwise give a reasonable estimate for this kind of food, or null if it makes no sense (e.g. a bar).",
+    "name: the product's name if you can see it (brand plus product is fine, keep it under 40 characters); otherwise a short plain guess from the ingredients or serving (e.g. \"Greek yogurt\"), or \"\" if you can't tell.",
+    "carbs means Total Carbohydrate. Check that kcal roughly equals 4*protein + 4*carbs + 9*fat.",
+    "If it is not a nutrition label or the numbers can't be found, return {\"error\": \"short reason\"}.",
+  ].join("\n");
+
+  function fillFromLabel(r, how, nameIsFinal) {
+    $("npRescan").hidden = !!nameIsFinal;
+    const num = v => { const n = parseFloat(v); return isFinite(n) && n >= 0 ? +n.toFixed(1) : ""; };
+    $("nName").value = "";
+    nameSuggestion = (r.name || "").trim();
+    $("nName").placeholder = nameSuggestion || "Name this food";
+    $("nNameHint").hidden = !nameSuggestion || !!nameIsFinal;
+    if (nameIsFinal) $("nName").value = nameSuggestion;
+    let amt = parseFloat(r.servingAmount), unit = ["g", "oz", "lb", "cup", "tbsp", "each"].includes(r.servingUnit) ? r.servingUnit : "g";
+    const each = parseFloat(r.gramsPerWhole);
+    if (unit === "each" && !(each > 0)) { unit = "g"; amt = parseFloat(r.servingGrams) > 0 ? parseFloat(r.servingGrams) : 100; }
+    const sg = parseFloat(r.servingGrams);
+    if (!(amt > 0)) { amt = sg > 0 ? sg : 100; unit = "g"; }
+    let cup = parseFloat(r.gramsPerCup);
+    if (VOL[unit] && !(cup > 0) && sg > 0) cup = sg / (amt * VOL[unit]);
+    if (VOL[unit] && !(cup > 0)) { unit = "g"; amt = sg > 0 ? sg : 100; }
+    unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, unit);
+    $("nUnit").dataset.prev = unit;
+    $("nAmt").value = +amt.toFixed(amt < 1 ? 3 : 1);
+    $("nCup").value = cup > 0 ? +cup.toFixed(1) : "";
+    $("nEach").value = each > 0 ? +each.toFixed(1) : "";
+    $("nK").value = num(r.kcal); $("nP").value = num(r.protein); $("nC").value = num(r.carbs); $("nF").value = num(r.fat);
+    showNewForm(how);
+    $("nName").focus({ preventScroll: true });
+    $("newPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function scanMsg(text) { const m = $("scanMsg"); m.hidden = !text; m.textContent = text || ""; if (!$("npStart").hidden) return; if (text) setStatus(text, true); }
+  function setBusy(on, label) {
+    scanning = on;
+    $("scanBtn").textContent = on ? (label || "Reading label...") : "Scan nutrition label";
+    $("scanTopText").textContent = on ? (label || "Reading label...") : "Scan nutrition label";
+    ["scanBtn", "npRescan", "scanTop"].forEach(id => on ? $(id).setAttribute("aria-disabled", "true") : $(id).removeAttribute("aria-disabled"));
+    if (on) { $("npRescan").textContent = "Reading..."; } else { $("npRescan").textContent = "Scan again"; }
+  }
+
+  $("scanFile").addEventListener("change", async () => {
+    const file = $("scanFile").files && $("scanFile").files[0];
+    $("scanFile").value = "";
+    if (!file || scanning) return;
+    if ($("newPanel").hidden) openNewFood();   // scanning from the big button at the top
+    scanMsg(""); setStatus("");
+    setBusy(true, "Getting ready...");
+    try {
+      await Promise.race([scanReady, new Promise(r => setTimeout(r, 4000))]);
+
+      // 1) Claude reads the photo directly, where that's possible
+      if (sampler && imgCaps && !(imgCaps.maxInputBytes && file.size > imgCaps.maxInputBytes)) {
+        setBusy(true, "Reading label...");
+        try {
+          const r = await sampler.json("The image is a photo of a food's Nutrition Facts label. Read it.\n" + LABEL_JSON, { images: [file], modelTier: "default" });
+          if (r && !r.error) { fillFromLabel(r, "From the label. Check these match, then name it."); return; }
+        } catch (e) { if (e && e.code === "cancelled") return; /* fall through to reading on the phone */ }
+      }
+
+      // 2) read the text on the phone
+      setBusy(true, ocrEngine ? "Reading label..." : "Loading the label reader...");
+      let text;
+      try {
+        await getOcr();
+        setBusy(true, "Reading label...");
+        text = await readText(file);
+      } catch (e) {
+        scanMsg("The label reader couldn't start on this device" + (e && e.message === "no-decompress" ? " (it needs a newer iOS or browser)" : "") + ". You can enter the numbers by hand.");
+        return;
+      }
+      if (!/calor|protein|carb|fat/i.test(text)) {
+        scanMsg("Couldn't find a nutrition label in that photo. Try again closer, straight on, with good light.");
+        return;
+      }
+
+      // 3) turn the text into numbers: Claude if available, otherwise the built-in check
+      if (sampler) {
+        try {
+          const r = await sampler.json(
+            "Below is text read from a photo of a Nutrition Facts label by an OCR program. It has typical OCR mistakes: " +
+            "the letter g is often read as 9 (\"239\" means 23g), O as 0, 'Og' means 0g, and digits can be doubled.\n" +
+            LABEL_JSON + "\n\nOCR text:\n" + text.slice(0, 4000), { modelTier: "default" });
+          if (r && !r.error) { fillFromLabel(r, "From the label. Check these match, then name it."); return; }
+        } catch (e) { if (e && e.code === "cancelled") return; }
+      }
+      const r = parseLabel(text);
+      if (!r.kcal && !r.protein && !r.carbs && !r.fat) { scanMsg("Couldn't read the numbers. Try a closer, sharper photo of the label."); return; }
+      fillFromLabel(r, "From the label. Double-check these against the label, then name it.");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  // ---------- editor ----------
+  let edTimer;
+  function scheduleFoodsSave() { clearTimeout(edTimer); edTimer = setTimeout(async () => { if (await saveFoods()) setStatus("Food values saved."); }, 700); }
+
+  $("nAdd").addEventListener("click", async () => {
+    const name = $("nName").value.trim() || nameSuggestion, unit = $("nUnit").value;
+    const amt = parseFloat($("nAmt").value), cupG = parseFloat($("nCup").value), eachG = parseFloat($("nEach").value);
+    const nums = ["nK", "nP", "nC", "nF"].map(id => parseFloat($(id).value) || 0);
+    if (!name) { setStatus("Give the new food a name.", true); $("nName").focus(); return; }
+    if (!(amt > 0)) { setStatus("Enter the serving size.", true); $("nAmt").focus(); return; }
+    if (VOL[unit] && !(cupG > 0)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("nCup").focus(); return; }
+    if (unit === "each" && !(eachG > 0)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("nEach").focus(); return; }
+    if (!nums[0]) { setStatus("Enter the calories for that serving.", true); return; }
+    const grams = amt * (unit === "each" ? eachG : VOL[unit] ? cupG * VOL[unit] : G[unit]);
+    const f = { id: "c" + Date.now().toString(36), name, detail: "", base: "g",
+      units: unitsWith(cupG, eachG),
+      per: { kcal: nums[0] / grams, p: nums[1] / grams, c: nums[2] / grams, f: nums[3] / grams },
+      def: { amount: amt, unit }, custom: true };
+    // show it right away and save in the background
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    const sub = $("npSub").textContent;
+    holdInPlace($("quick"), () => {
+      foods = [...foods, f];
+      closeNewFood(); render();
+      setStatus(`Saved ${name}. It's now in your food buttons.`);
+    });
+    if (!(await saveFoods())) {
+      // didn't save: take it back out and reopen the panel with everything still filled in
+      foods = foods.filter(x => x.id !== f.id); render();
+      $("newPanel").hidden = false; showNewForm(sub);
+      setStatus("That didn't save. Check your connection and tap Save food again.", true);
+    }
+  });
+
+  function twoTap(btn, onConfirm) {
+    let armed = false, t;
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      if (!armed) {
+        armed = true; btn.textContent = "Tap again to remove"; btn.classList.add("armed");
+        t = setTimeout(() => { armed = false; btn.textContent = "Remove"; btn.classList.remove("armed"); }, 4000);
+        return;
+      }
+      clearTimeout(t); btn.disabled = true; onConfirm();
+    });
+  }
+
+  // ---------- render ----------
+  function startTileRename(id, tile) {
+    const f = food(id); if (!f) return;
+    tileRenaming = id;
+    const box = document.createElement("div"); box.className = "tile-rename";
+    const inp = document.createElement("input");
+    inp.value = f.name; inp.setAttribute("aria-label", "Rename " + f.name);
+    inp.autocomplete = "off"; inp.enterKeyHint = "done"; inp.setAttribute("autocapitalize", "words");
+    box.appendChild(inp);
+    tile.replaceWith(box);
+    inp.focus();                       // inside the tap, so the iPhone keyboard opens
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    let done = false;
+    const finish = async save => {
+      if (done) return; done = true;
+      const name = inp.value.trim();
+      tileRenaming = null;
+      if (!save || !name || name === f.name) { render(); return; }
+      const before = foods;
+      foods = foods.map(x => x.id === id ? { ...x, name } : x);
+      if (selected === id) $("aName").textContent = name;
+      render();
+      if (await saveFoods()) setStatus(`Renamed to ${name}.`);
+      else { foods = before; render(); }
+    };
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+      else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    });
+    inp.addEventListener("blur", () => finish(true));
+  }
+
+  function renderQuick() {
+    const q = $("quick");
+    if (tileRenaming && q.querySelector(".tile-rename input") === document.activeElement) return;   // don't redraw mid-rename
+    q.innerHTML = "";
+    foods.forEach(f => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "food";
+      b.setAttribute("aria-pressed", String(selected === f.id));
+      b.textContent = f.name;
+      attachHold(b, f.id);
+      b.addEventListener("click", e => {
+        if (b.dataset.held === "1") { b.dataset.held = ""; e.preventDefault(); return; }
+        const now = performance.now();
+        if (lastTap.id === f.id && now - lastTap.t < 350) {          // double tap: rename right here
+          lastTap = { id: null, t: 0 };
+          if (selected === f.id) { selected = null; $("adder").hidden = true; }   // close without redrawing the buttons
+          startTileRename(f.id, b);
+          return;
+        }
+        lastTap = { id: f.id, t: now };
+        selected === f.id ? closeAdder() : openAdder(f.id);
+      });
+      q.appendChild(b);
+    });
+  }
+
+  // ---------- search: your foods, the USDA database, or ask Claude ----------
+  const USDA_URL = "/_blob/REPLACE_WITH_USDA_ID";   // SETUP: see SETUP-FOR-CLAUDE.md
+  let usda = null, usdaLoading = null, searchTimer = null, askBusy = false;
+  function loadUsda() {
+    if (usda) return Promise.resolve(usda);
+    if (!usdaLoading) {
+      usdaLoading = (window.__USDA ? Promise.resolve() : loadScript(USDA_URL)).then(() => {
+        usda = (window.__USDA || []).map(r => ({ name: r[0], per100: r.slice(1, 5), cup: r[5], each: r[6], key: norm(r[0]), first: norm(r[0].split(",")[0]),
+          brands: (r[0].match(/\b[A-Z]{3,}\b/g) || []).map(w => w.toLowerCase()) }));
+        usda.forEach(r => { if (!r.brands.length) r.brands = null; });
+        return usda;
+      }).catch(e => { usdaLoading = null; throw e; });
+    }
+    return usdaLoading;
+  }
+  const PROCESSED = / (breaded|fried|frozen|prepackaged|deli|fast foods?|restaurant|formulated|babyfood|baby|nuggets|patties|patty|microwaved|canned|dehydrated|imitation|flavor|flavored|mesquite|seasoned|sandwich|dinner|entree|school|lunch|meal|mix|prepared|sauce|pudding|pie|soup|stew|substitute)s? /;
+  const hasWord = (str, t) => str.includes(" " + t + " ") || str.includes(" " + t + "s ") || str.includes(" " + t + "es ");
+  const norm = t => " " + t.toLowerCase().replace(/[^a-z0-9%]+/g, " ").trim() + " ";
+  const tokens = q => norm(q).trim().split(" ").filter(Boolean);
+  // every word you type must start a word in the name ("tomato" finds "tomatoes")
+  const matchesAll = (key, toks) => toks.every(t => key.includes(" " + t));
+  function rankUsda(q) {
+    const toks = tokens(q); if (!toks.length || !usda) return [];
+    const out = [];
+    const qk = norm(q), qProcessed = PROCESSED.test(qk);
+    for (const r of usda) {
+      if (!matchesAll(r.key, toks)) continue;
+      let score = 0;
+      if (hasWord(r.first.split(" ", 2).join(" ") + " ", toks[0])) score += 6;  // name starts with the word (or its plural)
+      else if (r.first.startsWith(" " + toks[0])) score += 3;                  // ...or just its start
+      score += toks.filter(t => r.first.includes(" " + t)).length * 3;
+      score += toks.filter(t => hasWord(r.key, t)).length * 2;                  // whole-word matches
+      if (r.key.includes(" raw ") && !qk.includes(" cooked ")) score += 2;        // plain foods first
+      if (r.key.includes(" meat only ")) score += 2;
+      if (!qProcessed && PROCESSED.test(r.key)) score -= 5;                      // breaded, deli, brands...
+      if (r.brands && !r.brands.some(w => toks.some(t => w.startsWith(t)))) score -= 3;  // brand names only when asked for
+      score -= r.name.length / 25;
+      out.push([score, r]);
+    }
+    return out.sort((a, b) => b[0] - a[0]).slice(0, 8).map(x => x[1]);
+  }
+  function usdaServing(r) {
+    // start at 1 whole when there is one, else 1 cup, else 100 g
+    const [k, p, c, f] = r.per100;
+    const unit = r.each ? "each" : r.cup ? "cup" : "g";
+    const amount = unit === "g" ? 100 : 1;
+    const grams = unit === "each" ? r.each : unit === "cup" ? r.cup : 100;
+    const m = x => x * grams / 100;
+    return { name: r.name, servingAmount: amount, servingUnit: unit, servingGrams: grams,
+      gramsPerCup: r.cup || null, gramsPerWhole: r.each || null, kcal: m(k), protein: m(p), carbs: m(c), fat: m(f) };
+  }
+
+  function renderResults() {
+    const q = $("fSearch").value.trim(), box = $("fResults");
+    if (q.length < 2) { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false; box.innerHTML = "";
+    const head = t => { const h = document.createElement("h3"); h.textContent = t; box.appendChild(h); };
+    const row = (title, sub, onPick, cls) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "res" + (cls ? " " + cls : "");
+      b.textContent = title;
+      if (sub) { const sm = document.createElement("small"); sm.textContent = sub; b.appendChild(sm); }
+      b.addEventListener("click", onPick); box.appendChild(b); return b;
+    };
+    const toks = tokens(q);
+    const mine = foods.filter(f => matchesAll(norm(f.name), toks)).slice(0, 5);
+    if (mine.length) {
+      head("Your foods");
+      mine.forEach(f => {
+        const d = f.def || { amount: 100, unit: "g" }, m = macrosFor(f, d.amount, d.unit, 0);
+        row(f.name, `${r0(m.kcal)} kcal per ${fmtAmt(d.amount, d.unit)}`, () => { clearSearch(); openAdder(f.id); $("adder").scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+      });
+    }
+    head("USDA food database");
+    if (!usda) {
+      const p = document.createElement("p"); p.className = "none"; p.textContent = "Loading the food database..."; box.appendChild(p);
+      loadUsda().then(() => { if ($("fSearch").value.trim() === q) renderResults(); })
+        .catch(() => { p.textContent = "The food database couldn't load. Check your connection, or ask Claude below."; });
+    } else {
+      const hits = rankUsda(q);
+      if (!hits.length) { const p = document.createElement("p"); p.className = "none"; p.textContent = "No matches. Try fewer or different words, or ask Claude."; box.appendChild(p); }
+      hits.forEach(r => {
+        const sv = usdaServing(r);
+        row(r.name, `${r0(sv.kcal)} kcal, ${r0(sv.protein)} g protein per ${fmtAmt(sv.servingAmount, sv.servingUnit)}`, () => {
+          clearSearch(); openNewFood();
+          fillFromLabel(sv, "From the USDA database. Check the numbers and name, then save.", true);
+        });
+      });
+    }
+    if (sampler) {
+      head("Not listed?");
+      row(`Ask Claude about "${q}"`, "Good for brands and restaurant food", () => askClaude(q), "ask");
+    }
+  }
+  function clearSearch() { $("fSearch").value = ""; renderResults(); $("fSearch").blur(); }
+
+  async function askClaude(q) {
+    if (askBusy || !sampler) return;
+    askBusy = true; clearSearch(); openNewFood();
+    $("npStart").hidden = true; $("npForm").hidden = true;
+    setStatus(`Asking Claude about "${q}"...`);
+    try {
+      const r = await sampler.json([
+        `Give the nutrition for this food, as a person would typically eat it: "${q}".`,
+        "If it's a brand-name or restaurant item and you know its published nutrition, use that; otherwise use typical USDA-style values.",
+        "Return ONLY a JSON object, no other text:",
+        "{\"name\": string, \"servingAmount\": number, \"servingUnit\": \"g\" | \"oz\" | \"lb\" | \"cup\" | \"tbsp\" | \"each\", \"servingGrams\": number, \"gramsPerCup\": number or null, \"gramsPerWhole\": number or null, \"kcal\": number, \"protein\": number, \"carbs\": number, \"fat\": number}",
+        "kcal, protein, carbs and fat are for that one serving. \"each\" means one whole item (use it for things counted rather than measured: a medium piece of fruit or vegetable, an egg, a scoop of powder, a bar, a sandwich) and then gramsPerWhole is the weight of one.",
+        "gramsPerCup is the weight of one cup of the food if cups make sense, else null. name is short and clear (brand plus product if it's a brand).",
+        "If you don't recognize the food, return {\"error\": \"short reason\"}.",
+      ].join("\n"), { modelTier: "default" });
+      if (!r || r.error) { setStatus(r && r.error ? `Claude couldn't find that: ${r.error}` : "Claude couldn't find that food. Try describing it differently.", true); closeNewFood(); return; }
+      fillFromLabel(r, "From Claude. Check the numbers against the package if you have it, then save.", true);
+      setStatus("");
+    } catch (e) {
+      closeNewFood();
+      const code = e && e.code;
+      setStatus(code === "rate_limited" ? "Too many requests right now. Try again in a bit."
+        : code === "not_granted" ? "The tracker isn't allowed to use Claude. Allow it when asked, then try again."
+        : "Couldn't reach Claude. Check your connection and try again.", true);
+    } finally { askBusy = false; }
+  }
+
+  $("fSearch").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderResults, 120); });
+  $("fSearch").addEventListener("focus", () => { loadUsda().catch(() => {}); });
+  $("fSearch").addEventListener("keydown", e => { if (e.key === "Escape") clearSearch(); });
+
+  // ---------- haptic tap ----------
+  // Android: the vibration API. iPhone (iOS 18+): toggling a switch control gives a system haptic,
+  // so a hidden switch is flipped. Where neither exists, the tile's lift animation is the feedback.
+  let hapticLabel = null;
+  const canVibrate = () => typeof navigator.vibrate === "function" && !/iPhone|iPad|iPod/.test(navigator.userAgent);
+  function haptic() {
+    try { if (canVibrate() && navigator.vibrate(12)) return; } catch {}
+    try {
+      if (!hapticLabel) {
+        hapticLabel = document.createElement("label");
+        hapticLabel.setAttribute("aria-hidden", "true");
+        hapticLabel.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+        const sw = document.createElement("input");
+        sw.type = "checkbox"; sw.setAttribute("switch", ""); sw.tabIndex = -1;
+        hapticLabel.appendChild(sw);
+        document.body.appendChild(hapticLabel);
+      }
+      hapticLabel.click();
+    } catch {}
+  }
+
+  // ---------- press and hold a food ----------
+  function attachHold(el, id) {
+    let timer = null, sx = 0, sy = 0;
+    const cancel = () => { clearTimeout(timer); timer = null; el.classList.remove("pressing"); };
+    el.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      sx = e.clientX; sy = e.clientY; el.dataset.held = "";
+      el.classList.add("pressing");
+      timer = setTimeout(() => {
+        timer = null; el.classList.remove("pressing"); el.classList.add("held");
+        el.dataset.held = "1";
+        if (canVibrate()) haptic();   // Android can buzz right away
+        openSheet(id, el);
+      }, 480);
+    });
+    el.addEventListener("pointermove", e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    // iPhone only allows the haptic in direct response to a finger event, so give it as the finger lifts
+    el.addEventListener("touchend", () => { if (el.dataset.held === "1" && !canVibrate()) haptic(); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => el.addEventListener(ev, cancel));
+    el.addEventListener("contextmenu", e => {        // right-click, or Android's long-press menu
+      e.preventDefault();
+      if (el.dataset.held === "1") return;
+      cancel(); el.dataset.held = "1"; el.classList.add("held"); haptic(); openSheet(id, el);
+    });
+  }
+
+  let sheetFood = null, sheetTile = null, delArmed = false, delTimer;
+  function openSheet(id, tile) {
+    const f = food(id); if (!f) return;
+    sheetFood = id; sheetTile = tile;
+    $("sheetTitle").textContent = f.name;
+    const d = f.def || { amount: 100, unit: "g" }, m = macrosFor(f, d.amount, d.unit, 0);
+    $("sheetSub").textContent = `${r0(m.kcal)} kcal, ${r0(m.p)} g protein per ${fmtAmt(d.amount, d.unit)}`;
+    resetDelete();
+    backArmed = false;
+    $("sheetBack").hidden = false; $("sheet").hidden = false;
+    requestAnimationFrame(() => { $("sheetBack").classList.add("show"); $("sheet").classList.add("show"); });
+    $("shEdit").focus({ preventScroll: true });
+  }
+  function closeSheet() {
+    $("sheetBack").classList.remove("show"); $("sheet").classList.remove("show");
+    if (sheetTile) sheetTile.classList.remove("held");
+    setTimeout(() => { $("sheetBack").hidden = true; $("sheet").hidden = true; }, 260);
+    sheetFood = null; sheetTile = null; resetDelete();
+  }
+  function resetDelete() { delArmed = false; clearTimeout(delTimer); $("shDel").textContent = "Delete"; $("shDel").classList.remove("armed"); }
+  // only a fresh tap on the dimmed background closes the menu (not the finger lifting from the hold)
+  let backArmed = false;
+  $("sheetBack").addEventListener("pointerdown", () => { backArmed = true; });
+  $("sheetBack").addEventListener("click", () => { if (backArmed) closeSheet(); backArmed = false; });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+  $("shEdit").addEventListener("click", () => { const id = sheetFood; closeSheet(); openEdit(id); });
+  $("shDel").addEventListener("click", async () => {
+    if (!sheetFood) return;
+    if (!delArmed) {
+      delArmed = true; $("shDel").textContent = "Tap again to delete"; $("shDel").classList.add("armed");
+      delTimer = setTimeout(resetDelete, 4000); return;
+    }
+    const id = sheetFood, f = food(id), before = foods;
+    closeSheet();
+    foods = foods.filter(x => x.id !== id);
+    if (selected === id) closeAdder();
+    if (editing === id) closeEdit();
+    render();
+    if (await saveFoods()) setStatus(`Deleted ${f.name}. Days you already logged keep it.`);
+    else { foods = before; render(); }
+  });
+
+  // ---------- edit one food ----------
+  let editing = null;
+  function openEdit(id) {
+    const f = food(id); if (!f) return;
+    closeAdder(); $("newPanel").hidden = true;
+    editing = id;
+    $("eName").value = f.name;
+    const sel = $("eUnit");
+    $("eCup").value = f.units.cup ? +f.units.cup.toFixed(1) : "";
+    $("eEach").value = f.units.each ? +f.units.each.toFixed(1) : "";
+    const def = f.def && f.units[f.def.unit] != null ? f.def : { amount: 100, unit: "g" };
+    unitOptions(sel, { ...ALL_UNITS, each: 1 }, def.unit);   // cups, tablespoons and whole always offered; they need a weight
+    sel.dataset.prev = def.unit;
+    $("eAmt").value = def.amount;
+    epPer = { ...f.per };
+    fillEditMacros();
+    $("editPanel").hidden = false; setStatus("");
+    $("editPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function closeEdit() { editing = null; $("editPanel").hidden = true; }
+  // the numbers shown are for the serving; they're stored per base unit
+  let epPer = null;
+  const MKEYS = [["eK", "kcal"], ["eP", "p"], ["eC", "c"], ["eF", "f"]];
+  const editUnitGrams = u => u === "each" ? (parseFloat($("eEach").value) || 0) : VOL[u] ? (parseFloat($("eCup").value) || 0) * VOL[u] : G[u];
+  function servingFactor() {
+    const a = parseFloat($("eAmt").value);
+    return (isFinite(a) && a > 0 ? a : 1) * (editUnitGrams($("eUnit").value) || 1);
+  }
+  function fillEditMacros() {
+    const k = servingFactor();
+    MKEYS.forEach(([id, key]) => { $(id).value = +(epPer[key] * k).toFixed(1); });
+  }
+  MKEYS.forEach(([id, key]) => $(id).addEventListener("input", () => {
+    const v = parseFloat($(id).value);
+    if (isFinite(v) && v >= 0 && epPer) epPer[key] = v / servingFactor();
+  }));
+  $("eAmt").addEventListener("input", () => { if (epPer) fillEditMacros(); });
+  $("eCup").addEventListener("input", () => { if (epPer && VOL[$("eUnit").value]) fillEditMacros(); });
+  $("eEach").addEventListener("input", () => { if (epPer && $("eUnit").value === "each") fillEditMacros(); });
+  $("eUnit").addEventListener("change", () => {
+    // keep the same amount of food when switching units, e.g. 8 oz -> 0.5 lb
+    const f = food(editing); if (!f) return;
+    const prev = $("eUnit").dataset.prev, a = parseFloat($("eAmt").value);
+    const gPrev = editUnitGrams(prev), gNext = editUnitGrams($("eUnit").value);
+    if (isFinite(a) && gPrev && gNext) {
+      const conv = a * gPrev / gNext;
+      $("eAmt").value = +conv.toFixed(conv < 1 ? 3 : conv < 10 ? 2 : 0);
+    }
+    $("eUnit").dataset.prev = $("eUnit").value;
+    if (VOL[$("eUnit").value] && !gNext) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("eCup").focus(); }
+    if ($("eUnit").value === "each" && !gNext) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("eEach").focus(); }
+    fillEditMacros();
+  });
+  $("epClose").addEventListener("click", closeEdit);
+  $("eSave").addEventListener("click", async () => {
+    const f = food(editing); if (!f) { closeEdit(); return; }
+    const name = $("eName").value.trim();
+    const v = ["eK", "eP", "eC", "eF"].map(id => parseFloat($(id).value));
+    const amt = parseFloat($("eAmt").value), unit = $("eUnit").value;
+    if (!name) { setStatus("The food needs a name.", true); $("eName").focus(); return; }
+    if (!isFinite(amt) || amt <= 0) { setStatus("Enter a serving size greater than zero.", true); $("eAmt").focus(); return; }
+    if (v.some(x => !isFinite(x) || x < 0)) { setStatus("Fill in all four numbers (use 0 for none).", true); return; }
+    const cupG = parseFloat($("eCup").value);
+    const eachG = parseFloat($("eEach").value);
+    if (VOL[unit] && !(cupG > 0)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("eCup").focus(); return; }
+    if (unit === "each" && !(eachG > 0)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("eEach").focus(); return; }
+    const k = amt * (unit === "each" ? eachG : VOL[unit] ? cupG * VOL[unit] : G[unit]);
+    const per = { kcal: +(v[0] / k).toFixed(6), p: +(v[1] / k).toFixed(6), c: +(v[2] / k).toFixed(6), f: +(v[3] / k).toFixed(6) };
+    const units = unitsWith(cupG, eachG);
+    const before = foods;
+    foods = foods.map(x => x.id === f.id ? { ...x, name, per, units, base: "g", def: { amount: amt, unit } } : x);
+    closeEdit(); render();
+    if (await saveFoods()) setStatus(`Saved changes to ${name}. Days you already logged keep their old numbers.`);
+    else { foods = before; render(); }
+  });
+
+  function publishCalories() {
+    const kcal = {};
+    Object.keys(days).forEach(k => { const t = (days[k] || []).reduce((a, i) => a + (i.kcal || 0), 0); if (t > 0) kcal[k] = Math.round(t); });
+    const sig = JSON.stringify(kcal);
+    if (sig === lastShared) return;
+    lastShared = sig;
+    window.appShared = { ...(window.appShared || {}), kcal };
+    window.dispatchEvent(new Event("food-updated"));
+  }
+
+  function render() {
+    publishCalories();
+    const pageY = window.scrollY;
+    const today = iso(new Date());
+    const rel = day === today ? "Today" : day === shift(today, -1) ? "Yesterday" : day === shift(today, 1) ? "Tomorrow" : "";
+    $("fDay").innerHTML = "";
+    $("fDay").append(document.createTextNode(fmtLong(parse(day))));
+    if (rel) { const s = document.createElement("small"); s.textContent = rel; $("fDay").appendChild(s); }
+
+    $("eatenHead").textContent = day === today ? "Eaten Today" : day === shift(today, -1) ? "Eaten Yesterday"
+      : "Eaten on " + parse(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const items = days[day] || [];
+    const tot = items.reduce((a, i) => ({ kcal: a.kcal + i.kcal, p: a.p + i.p, c: a.c + i.c, f: a.f + i.f }), { kcal: 0, p: 0, c: 0, f: 0 });
+    $("tK").textContent = r0(tot.kcal).toLocaleString();
+    $("tP").textContent = `${r0(tot.p)} g`; $("tC").textContent = `${r0(tot.c)} g`; $("tF").textContent = `${r0(tot.f)} g`;
+
+    const list = $("fList"); list.innerHTML = "";
+    if (!items.length) {
+      const p = document.createElement("p"); p.className = "fempty"; p.textContent = "Nothing logged yet. Tap a food above to add it.";
+      list.appendChild(p);
+    }
+    items.forEach(i => {
+      const row = document.createElement("div"); row.className = "item";
+      const w = document.createElement("div"); w.className = "what";
+      const b = document.createElement("b"); b.textContent = itemLabel(i);
+      const sm = document.createElement("small");
+      sm.textContent = `${r0(i.kcal)} kcal, ${r0(i.p)} g protein, ${r0(i.c)} g carbs, ${r0(i.f)} g fat` + (i.oil ? `, with ${+i.oil.toFixed(2)} tbsp olive oil` : "");
+      w.append(b, sm);
+      const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "Remove";
+      twoTap(del, async () => {
+        const key = day, before = days[key];
+        holdInPlace($("fList"), () => { days[key] = before.filter(x => x.id !== i.id); render(); });
+        if (await saveDay(key)) setStatus(`Removed ${i.name.toLowerCase()}.`); else { days[key] = before; render(); }
+      });
+      row.append(w, del); list.appendChild(row);
+    });
+    $("fCopy").hidden = items.length > 0 || !(days[shift(day, -1)] || []).length;
+
+    renderQuick();
+    if (window.scrollY !== pageY) window.scrollTo(0, pageY);
+  }
+})();
+</script>
+</body>
+</html>
