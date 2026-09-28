@@ -201,6 +201,11 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .macros div { text-align: center; }
 .macros b { display: block; font-size: 1.25rem; }
 .macros span { color: var(--muted); font-size: .85rem; }
+.pgoal { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.pbar { flex: 1; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--daily) 20%, transparent); overflow: hidden; }
+.pbar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--daily); transition: width .3s ease; }
+.pgoal small { color: var(--muted); font-size: .82rem; white-space: nowrap; }
+.pgoal.met small { color: var(--daily); font-weight: 600; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
 /* food: quick add */
@@ -415,6 +420,10 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         <div><b id="tP">0 g</b><span>Protein</span></div>
         <div><b id="tC">0 g</b><span>Carbs</span></div>
         <div><b id="tF">0 g</b><span>Fat</span></div>
+      </div>
+      <div class="pgoal" id="pGoalWrap" hidden>
+        <div class="pbar"><i id="pBar"></i></div>
+        <small id="pGoalTxt"></small>
       </div>
     </div>
 
@@ -667,6 +676,18 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     });
   }
 
+  // The food tab's protein goal is a body weight: the previous *completed* week's
+  // average, or (until there is one) the latest weigh-in. Published for the food module.
+  function publishGoalWeight(daily, weekly) {
+    const thisWeek = iso(monday(new Date()));
+    const done = weekly.filter(w => w.key < thisWeek);
+    const goalWeight = done.length ? done[done.length - 1].y
+      : daily.length ? daily[daily.length - 1].y : null;
+    const prev = (window.appShared || {}).goalWeight;
+    window.appShared = { ...(window.appShared || {}), goalWeight };
+    if (goalWeight !== prev) window.dispatchEvent(new Event("weight-updated"));
+  }
+
   // ---------- chart ----------
   function niceStep(range, target) {
     const raw = range / target;
@@ -915,6 +936,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   function renderInner() {
     const daily = dailySeries();
     const weekly = weeklySeries(daily);
+    publishGoalWeight(daily, weekly);
     renderMaintenance(daily);
     renderWeekTable(daily, weekly);
 
@@ -981,7 +1003,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.0.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.1.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1203,6 +1225,10 @@ window.appPrefs = { glow: true };
   const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
   const r0 = v => Math.round(v);
   const OZ_PER_G = 1 / 28.3495;
+  // Daily protein goal: 1 g per lb of body weight (the 0.9–1.1 g/lb range brackets this).
+  // The body weight comes from the weight module (window.appShared.goalWeight).
+  const PROTEIN_PER_LB = 1.0;
+  window.addEventListener("weight-updated", () => render());
 
   // Every food is stored by weight: `per` is macros per gram, and `units` says how many
   // grams one gram / ounce / pound / cup is. Cups need to know what a cup of that food weighs.
@@ -2172,6 +2198,20 @@ window.appPrefs = { glow: true };
     const tot = items.reduce((a, i) => ({ kcal: a.kcal + i.kcal, p: a.p + i.p, c: a.c + i.c, f: a.f + i.f }), { kcal: 0, p: 0, c: 0, f: 0 });
     $("tK").textContent = r0(tot.kcal).toLocaleString();
     $("tP").textContent = `${r0(tot.p)} g`; $("tC").textContent = `${r0(tot.c)} g`; $("tF").textContent = `${r0(tot.f)} g`;
+
+    // Protein goal (needs a body weight from the weight module; hidden until then)
+    const goalW = (window.appShared || {}).goalWeight;
+    const pGoal = goalW ? Math.round(goalW * PROTEIN_PER_LB) : null;
+    const pw = $("pGoalWrap");
+    if (pGoal) {
+      const met = tot.p >= pGoal;
+      $("pBar").style.width = Math.max(0, Math.min(100, tot.p / pGoal * 100)) + "%";
+      $("pGoalTxt").textContent = `${r0(tot.p)} / ${pGoal} g protein` + (met ? " ✓" : "");
+      pw.classList.toggle("met", met);
+      pw.hidden = false;
+    } else {
+      pw.hidden = true;
+    }
 
     const list = $("fList"); list.innerHTML = "";
     if (!items.length) {

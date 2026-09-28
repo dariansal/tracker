@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.1.0 (2026-09-28)
+
+- Food tab: a **daily protein goal**. A slim bar under the totals fills as you eat protein and marks the goal met with a check. The goal is 1 gram per pound of body weight, taken from the previous completed week's average weight (weeks start Monday); until there is a previous week, it uses your latest weigh-in. It stays hidden until you have logged at least one weigh-in.
+- "Same as yesterday" was already present as the **Copy the day before** button under Eaten (shown when the day is empty and the day before has food); no change needed.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.0.0 (2026-09-28)
 
 First public release.
