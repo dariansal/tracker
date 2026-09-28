@@ -201,11 +201,15 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .macros div { text-align: center; }
 .macros b { display: block; font-size: 1.25rem; }
 .macros span { color: var(--muted); font-size: .85rem; }
-.pgoal { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.pbar { flex: 1; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--daily) 20%, transparent); overflow: hidden; }
-.pbar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--daily); transition: width .3s ease; }
-.pgoal small { color: var(--muted); font-size: .82rem; white-space: nowrap; }
-.pgoal.met small { color: var(--daily); font-weight: 600; }
+.pgoal { grid-column: 1 / -1; margin-top: 8px; }
+.pbar { position: relative; height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 18%, transparent); }
+.pbar .pband { position: absolute; top: 0; height: 100%; background: color-mix(in srgb, var(--daily) 22%, transparent); }
+.pbar i { position: absolute; left: 0; top: 0; height: 100%; width: 0; border-radius: 999px; background: var(--muted); transition: width .3s ease, background .3s ease; z-index: 1; }
+.pgoal.met .pbar i { background: var(--daily); }
+.pbar .post { position: absolute; top: -3px; height: 16px; width: 2.5px; margin-left: -1.25px; border-radius: 2px; background: var(--ink); opacity: .5; z-index: 2; }
+.pscale { position: relative; height: 14px; margin-top: 7px; font-size: .72rem; color: var(--muted); }
+.pscale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.pscale .pmet { color: var(--daily); font-weight: 700; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
 /* food: quick add */
@@ -422,8 +426,18 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         <div><b id="tF">0 g</b><span>Fat</span></div>
       </div>
       <div class="pgoal" id="pGoalWrap" hidden>
-        <div class="pbar"><i id="pBar"></i></div>
-        <small id="pGoalTxt"></small>
+        <span class="vh" id="pSr"></span>
+        <div class="pbar" aria-hidden="true">
+          <u class="pband" id="pBand"></u>
+          <i id="pBar"></i>
+          <u class="post" id="pPostLow"></u>
+          <u class="post" id="pPostHigh"></u>
+        </div>
+        <div class="pscale" aria-hidden="true">
+          <span id="pLbLow"></span>
+          <span id="pLbHigh"></span>
+          <span id="pLbMet" class="pmet"></span>
+        </div>
       </div>
     </div>
 
@@ -1003,7 +1017,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.1.1";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.1.2";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -2200,14 +2214,22 @@ window.appPrefs = { glow: true };
     $("tK").textContent = r0(tot.kcal).toLocaleString();
     $("tP").textContent = `${r0(tot.p)} g`; $("tC").textContent = `${r0(tot.c)} g`; $("tF").textContent = `${r0(tot.f)} g`;
 
-    // Protein goal range (needs a body weight from the weight module; hidden until then)
+    // Protein goal shown as a range: two goalpost ticks mark the low/high ends of the
+    // 0.9–1.1 g/lb band. The fill turns green once it reaches the band. Hidden until a weigh-in.
     const goalW = (window.appShared || {}).goalWeight;
     const pw = $("pGoalWrap");
     if (goalW) {
       const pLow = Math.round(goalW * PROTEIN_LB_LOW), pHigh = Math.round(goalW * PROTEIN_LB_HIGH);
-      const met = tot.p >= pLow;   // in range once you reach the low end
-      $("pBar").style.width = Math.max(0, Math.min(100, tot.p / pLow * 100)) + "%";
-      $("pGoalTxt").textContent = `${r0(tot.p)} / ${pLow}–${pHigh} g protein` + (met ? " ✓" : "");
+      const trackMax = pHigh * 1.2;   // a little room past the high end so the top post isn't at the edge
+      const lowPct = pLow / trackMax * 100, highPct = pHigh / trackMax * 100;
+      const met = tot.p >= pLow;      // in range once you reach the low end
+      $("pBar").style.width = Math.max(0, Math.min(100, tot.p / trackMax * 100)) + "%";
+      $("pBand").style.left = lowPct + "%"; $("pBand").style.width = (highPct - lowPct) + "%";
+      $("pPostLow").style.left = lowPct + "%"; $("pPostHigh").style.left = highPct + "%";
+      $("pLbLow").style.left = lowPct + "%"; $("pLbLow").textContent = pLow;
+      $("pLbHigh").style.left = highPct + "%"; $("pLbHigh").textContent = pHigh;
+      $("pLbMet").style.left = (lowPct + highPct) / 2 + "%"; $("pLbMet").textContent = met ? "✓" : "";
+      $("pSr").textContent = `Protein ${r0(tot.p)} g, goal ${pLow} to ${pHigh} g${met ? ", in range" : ""}.`;
       pw.classList.toggle("met", met);
       pw.hidden = false;
     } else {

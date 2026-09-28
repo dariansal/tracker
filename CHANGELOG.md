@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.1.2 (2026-09-28)
+
+- Protein goal bar redesigned to show the range **on the bar itself** instead of spelling it out in text. Two goalpost ticks mark the low and high ends of the range (labelled underneath, e.g. `151` and `185`), with a faint band between them. Your protein fills across the bar and turns green with a check once it reaches the range.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.1.1 (2026-09-28)
 
 - Protein goal is now shown as a **range** rather than a single number: 0.9 to 1.1 grams per pound of body weight (for example, `151–185 g`). The bar fills toward the low end, and the goal counts as met with a check once you reach that low end (i.e. you're in the range).
