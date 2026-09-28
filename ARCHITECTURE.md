@@ -59,7 +59,8 @@ Stored in the artifact `db` (see `SETUP-FOR-CLAUDE.md` for the exact document la
 - **Foods:** `settings/foods` → `{ foods: [...] }`. Every food is stored **by weight**: `per` is kcal, p, c, f **per gram**, and `units` maps each unit to grams: `g: 1`, `oz: 28.3495`, `lb: 453.592`, optional `cup`, `tbsp` (always `cup / 16`), and optional `each` (weight of one whole item). `def` is the default serving `{ amount, unit }`. `cooked: true` adds an "Olive oil (tbsp)" field when logging (1 tbsp = 13.5 g, macros from the food with id `oil`, or built-in olive oil values).
 - `normalizeFood()` converts older formats (per-unit macros, units like "banana" or "scoop") into this shape on load. Keep it working.
 - **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ glow }`.
-- **localStorage keys:** `weight-log-v1`, `food-days-v1`, `food-lib-v1`, `profile-v1`, `prefs-v1` (fallbacks, moved into the db when it connects), plus `log-tab`.
+- **Workout days:** `settings/workouts` → `{ dates: ["YYYY-MM-DD", ...] }`. Just a set of dates the owner marked as a workout day; kept separate from the food log so it never affects logged items or weigh-ins. Used for the "Workout days vs rest days" calorie comparison on the food tab.
+- **localStorage keys:** `weight-log-v1`, `food-days-v1`, `food-lib-v1`, `food-workouts-v1`, `profile-v1`, `prefs-v1` (fallbacks, moved into the db when it connects), plus `log-tab`.
 
 The user-visible units are exactly: **grams, ounces, pounds, cups, tablespoons, and whole**. The owner asked for this standard set, so don't add other units (like "serving" or "scoop"); countable things use "whole".
 

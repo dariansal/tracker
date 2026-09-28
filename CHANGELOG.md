@@ -2,6 +2,15 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.2.0 (2026-09-28)
+
+- Food tab: a **Workout day** toggle under the day's totals. Tap it to mark that the day included a workout; tap again to clear it.
+- New **Workout days vs rest days** card (shows once you have at least one workout day and one rest day with food logged): average calories eaten on workout days vs rest days, and the difference between them.
+- Workout marks are stored per day in a new `settings/workouts` document (with a `food-workouts-v1` localStorage fallback), so they sync and never touch your food log or weigh-ins.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.1.2 (2026-09-28)
 
 - Protein goal bar redesigned to show the range **on the bar itself** instead of spelling it out in text. Two goalpost ticks mark the low and high ends of the range (labelled underneath, e.g. `151` and `185`), with a faint band between them. Your protein fills across the bar and turns green with a check once it reaches the range.
