@@ -211,8 +211,9 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .pscale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .pscale .pmet { color: var(--daily); font-weight: 700; }
 /* workout day toggle + comparison */
-.daybar .wko-mini { min-width: 34px; height: 30px; padding: 0 7px; font-size: 1rem; line-height: 1; border-radius: 999px; opacity: .4; filter: grayscale(1); transition: opacity .2s, filter .2s; }
-.daybar .wko-mini[aria-pressed="true"] { opacity: 1; filter: none; border-color: var(--weekly); background: color-mix(in srgb, var(--weekly) 12%, var(--card)); }
+.daybar .wko-mini { min-width: 30px; height: 27px; padding: 0 6px; margin-left: 5px; border-radius: 999px; color: var(--muted); opacity: .55; transition: opacity .2s, color .2s, background .2s, border-color .2s; }
+.daybar .wko-mini svg { display: block; }
+.daybar .wko-mini[aria-pressed="true"] { opacity: 1; color: var(--weekly); border-color: var(--weekly); background: color-mix(in srgb, var(--weekly) 12%, var(--card)); }
 #fDayText { text-align: center; }
 .wko-legend { display: flex; align-items: center; gap: 6px; }
 .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -385,7 +386,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 
   <section class="chart" aria-labelledby="h-daily">
     <h2 id="h-daily">Day by day</h2>
-    <p class="sub">Every weigh-in you've logged. Tap a point to see that day's weight and calories, or delete it.</p>
+    <p class="sub">Every weigh-in you've logged. Tap a point for that day's weight and calories or to delete it; press and hold to open that day's food.</p>
     <div class="readout" id="ro-daily"></div>
     <div class="plot" id="plot-daily"></div>
     <p class="sub wko-legend" id="dailyLegend" hidden><span class="lg-dot solid"></span> workout day <span class="lg-dot open"></span> rest day</p>
@@ -430,7 +431,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       <button type="button" id="fPrev" aria-label="Previous day">‹</button>
       <div class="d" id="fDay">
         <span id="fDayText"></span>
-        <button type="button" id="fWorkout" class="wko-mini" aria-pressed="false" aria-label="Mark this day as a workout" title="Workout day">🏋️</button>
+        <button type="button" id="fWorkout" class="wko-mini" aria-pressed="false" aria-label="Mark this day as a workout" title="Workout day"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6M7 6.5v11M17 6.5v11M20 9v6M7 12h10"/></svg></button>
       </div>
       <button type="button" id="fNext" aria-label="Next day">›</button>
     </div>
@@ -829,8 +830,19 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       pts.forEach(p => { const dd = Math.abs(sx(p.x.getTime()) - px); if (dd < bd) { bd = dd; best = p; } });
       return best;
     };
-    hit.addEventListener("pointermove", e => show(nearest(e)));
-    hit.addEventListener("pointerdown", e => show(nearest(e)));
+    let holdTimer = null, downX = 0, downY = 0;
+    const cancelHold = () => { clearTimeout(holdTimer); holdTimer = null; };
+    hit.addEventListener("pointermove", e => {
+      show(nearest(e));
+      if (holdTimer && (Math.abs(e.clientX - downX) > 10 || Math.abs(e.clientY - downY) > 10)) cancelHold();
+    });
+    hit.addEventListener("pointerdown", e => {
+      show(nearest(e));
+      if (opts.onHold) { downX = e.clientX; downY = e.clientY; const p = nearest(e); cancelHold(); holdTimer = setTimeout(() => { cancelHold(); opts.onHold(p); }, 480); }
+    });
+    hit.addEventListener("pointerup", cancelHold);
+    hit.addEventListener("pointercancel", cancelHold);
+    hit.addEventListener("pointerleave", cancelHold);
     hit.addEventListener("click", e => show(nearest(e)));
 
     container.appendChild(svg);
@@ -1006,6 +1018,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       color: "var(--daily)", lineWidth: 1.75, dot: 3.5,
       empty: "Log your first weigh-in above to start the chart.",
       mark: p => isWorkout(p.key),
+      onHold: p => window.dispatchEvent(new CustomEvent("open-food-day", { detail: { key: p.key } })),
       describe: p => {
         const k = kcalOf(p.key);
         return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged") + (isWorkout(p.key) ? " · workout" : "");
@@ -1048,7 +1061,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.3.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.4.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1079,12 +1092,12 @@ window.appPrefs = { glow: true };
 (() => {
   const cv = document.getElementById("edgeCanvas"); if (!cv || !cv.getContext) return;
   const ctx = cv.getContext("2d");
-  const LAP_MS = 36000, RADIUS = 55, CORNER_SPEED = 1.25;
+  const LAP_MS = 18000, RADIUS = 55, CORNER_SPEED = 1.25;
   const BRIGHTNESS = 0.6;
   // shows for 20 s every 2 minutes (starting when you open the tracker), fading in and out
   const CYCLE_MS = 120000, SHOW_MS = 20000, FADE_IN_MS = 2500, FADE_OUT_MS = 3000;
   let vis = 1;                                    // overall strength of the line and glow   // 55 = iPhone 15 Pro corner radius
-  const CORE = 5, INSET = 3;                                // line thickness, distance from the edge
+  const CORE = 7.5, INSET = 4;                              // line thickness, distance from the edge
   const TAIL_PX = 240, STEP = 1.5;                           // tail length on screen, drawing step
   let W = 0, H = 0, dpr = 1, pts = [], total = 0, timeAt = [], color = "#2446A8";
 
@@ -1147,7 +1160,7 @@ window.appPrefs = { glow: true };
     ctx.closePath(); ctx.clip();
     ctx.strokeStyle = color; ctx.lineCap = "butt"; ctx.lineJoin = "round";
     // soft glow first (wide and faint), then the crisp core; both fade smoothly toward the tail end
-    for (const [width, strength] of [[28, 0.045], [23, 0.055], [18, 0.07], [13, 0.09], [9, 0.14], [CORE, 1]]) {
+    for (const [width, strength] of [[42, 0.045], [34.5, 0.055], [27, 0.07], [19.5, 0.09], [13.5, 0.14], [CORE, 1]]) {
       ctx.lineWidth = width;
       for (let j = tailN - 1; j >= 0; j--) {
         const a = pts[((head - j) % n + n) % n], b = pts[((head - j - 1) % n + n) % n];
@@ -1454,6 +1467,14 @@ window.appPrefs = { glow: true };
     if (on) workouts[day] = true; else delete workouts[day];
     render();
     if (!(await saveWorkouts())) { if (on) delete workouts[day]; else workouts[day] = true; render(); }
+  });
+
+  // ---------- open a specific day's food (from pressing and holding a point on the weight chart) ----------
+  window.addEventListener("open-food-day", e => {
+    const key = e.detail && e.detail.key; if (!key) return;
+    releaseSpacer(); day = key; closeAdder(); render();
+    $("tab-food").click();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
   // ---------- adder ----------

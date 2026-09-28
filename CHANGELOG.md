@@ -2,6 +2,15 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.4.0 (2026-09-28)
+
+- The workout marker by the date is now a small **dumbbell** (not the weight-lifter person), a bit smaller and nudged slightly to the right of the date.
+- On the "Day by day" weight chart, **press and hold a point to jump to that day's food** (short tap still shows the weight/calories readout with delete). The chart's help text mentions this.
+- Glowing edge: **twice as fast** (a lap now takes 18 s instead of 36 s) and **50% thicker**.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.3.0 (2026-09-28)
 
 - The workout marker moved from the button under the totals to a small **🏋️ toggle right next to the date** on the Food tab. Tap it to mark the day (it lights up); tap again to clear. Much more minimal, and it sits with the day it belongs to.

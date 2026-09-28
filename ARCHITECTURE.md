@@ -70,7 +70,7 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 
 **Weight tab**
 - Enter a weight and save. The date then **moves forward one day**. Deleting an entry **moves the date back one day**. The page always opens on today.
-- Charts are hand-drawn SVG: "Day by day" and "Weekly average" (weeks start Monday), with date labels **centered under the points**. Tap a point to see its date, weight, and calories eaten.
+- Charts are hand-drawn SVG: "Day by day" and "Weekly average" (weeks start Monday), with date labels **centered under the points**. Tap a point to see its date, weight, and calories eaten. On "Day by day", **press and hold a point to open that day on the food tab** (via the `open-food-day` event; `drawChart`'s `opts.onHold`). Workout days are solid dots, rest days open dots (`opts.mark`).
 - Deleting (from the chart or the list) takes **two taps**: "Delete", then "Tap again to delete". No `confirm()`.
 - Redraws keep your scroll position (`holdInPlace`, `scrollY` restore); the page must not jump.
 - Week-by-week table: average weight, change from the previous week (neutral colors, since gaining isn't marked as bad), and average daily calories.
@@ -94,7 +94,7 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 
 **Settings (gear):** the "Glowing edge" switch (saved to the account) and the version number.
 
-**Edge glow** (canvas, only while the switch is on): a line that travels around the rounded screen edge at a **steady speed**, only 25% faster through the corners (`CORNER_SPEED 1.25`). One lap takes 36 s. Brightness 0.6, core 5 px, tail 240 px with a gradual fade, soft layered glow, corner radius 55 (iPhone 15 Pro), clipped to the rounded screen shape so the thickness is even everywhere. It shows for **20 s every 2 minutes** (2.5 s fade in, 3 s fade out) and draws nothing while hidden. With Reduce Motion on, it's drawn once and doesn't move. The owner tuned all of these numbers; don't change them unless asked.
+**Edge glow** (canvas, only while the switch is on): a line that travels around the rounded screen edge at a **steady speed**, only 25% faster through the corners (`CORNER_SPEED 1.25`). One lap takes 18 s. Brightness 0.6, core 7.5 px (inset 4), tail 240 px with a gradual fade, soft layered glow, corner radius 55 (iPhone 15 Pro), clipped to the rounded screen shape so the thickness is even everywhere. It shows for **20 s every 2 minutes** (2.5 s fade in, 3 s fade out) and draws nothing while hidden. With Reduce Motion on, it's drawn once and doesn't move. The owner tuned all of these numbers; don't change them unless asked.
 
 ## 6. Known limits
 
