@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.5.0 (2026-09-28)
+
+- Opening a day's food from the weight chart no longer uses a press-and-hold (which was unreliable) and never jumps automatically. Now: **tap a point** on "Day by day", then tap the **"See food"** button that appears in the readout, then **"Tap to open ›"** to confirm — a deliberate two-tap so you're always the one choosing to switch.
+- Glowing edge is now a **one-shot**: when you open the tracker, the line **races around the screen once and then fades away**, instead of reappearing every couple of minutes. Turning the switch on in Settings replays it.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.4.0 (2026-09-28)
 
 - The workout marker by the date is now a small **dumbbell** (not the weight-lifter person), a bit smaller and nudged slightly to the right of the date.

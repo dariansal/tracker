@@ -100,6 +100,8 @@ summary { cursor: pointer; font-weight: 600; }
 .readout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 36px; }
 .del.armed, .readout .del.armed, .row .del.armed { background: var(--danger); color: var(--card); border-color: var(--danger); }
 .del, .readout .del, .row .del { flex-shrink: 0; min-height: 34px; padding: 0 12px; background: transparent; color: var(--danger); border-color: var(--rule); font-weight: 500; }
+.readout .seefood { flex-shrink: 0; min-height: 34px; padding: 0 12px; background: transparent; color: var(--weekly); border-color: var(--rule); font-weight: 500; }
+.readout .seefood.armed { background: var(--weekly); color: var(--card); border-color: var(--weekly); }
 
 @media (max-width: 520px) {
   .entry { grid-template-columns: 1fr 1fr; }
@@ -386,7 +388,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 
   <section class="chart" aria-labelledby="h-daily">
     <h2 id="h-daily">Day by day</h2>
-    <p class="sub">Every weigh-in you've logged. Tap a point for that day's weight and calories or to delete it; press and hold to open that day's food.</p>
+    <p class="sub">Every weigh-in you've logged. Tap a point for that day's weight and calories, then "See food" to open that day, or delete it.</p>
     <div class="readout" id="ro-daily"></div>
     <div class="plot" id="plot-daily"></div>
     <p class="sub wko-legend" id="dailyLegend" hidden><span class="lg-dot solid"></span> workout day <span class="lg-dot open"></span> rest day</p>
@@ -566,7 +568,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
   <b id="setTitle">Settings</b>
   <label class="setrow" for="prefGlow">
-    <span class="settext"><span>Glowing edge</span><small>A soft line that circles the screen for 20 seconds every couple of minutes.</small></span>
+    <span class="settext"><span>Glowing edge</span><small>A line that races once around the screen when you open the tracker, then fades. Flip this to see it again.</small></span>
     <input type="checkbox" id="prefGlow" class="toggle" role="switch">
   </label>
   <button type="button" id="setDone" class="sheet-btn">Done</button>
@@ -830,19 +832,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       pts.forEach(p => { const dd = Math.abs(sx(p.x.getTime()) - px); if (dd < bd) { bd = dd; best = p; } });
       return best;
     };
-    let holdTimer = null, downX = 0, downY = 0;
-    const cancelHold = () => { clearTimeout(holdTimer); holdTimer = null; };
-    hit.addEventListener("pointermove", e => {
-      show(nearest(e));
-      if (holdTimer && (Math.abs(e.clientX - downX) > 10 || Math.abs(e.clientY - downY) > 10)) cancelHold();
-    });
-    hit.addEventListener("pointerdown", e => {
-      show(nearest(e));
-      if (opts.onHold) { downX = e.clientX; downY = e.clientY; const p = nearest(e); cancelHold(); holdTimer = setTimeout(() => { cancelHold(); opts.onHold(p); }, 480); }
-    });
-    hit.addEventListener("pointerup", cancelHold);
-    hit.addEventListener("pointercancel", cancelHold);
-    hit.addEventListener("pointerleave", cancelHold);
+    hit.addEventListener("pointermove", e => show(nearest(e)));
+    hit.addEventListener("pointerdown", e => show(nearest(e)));
     hit.addEventListener("click", e => show(nearest(e)));
 
     container.appendChild(svg);
@@ -874,6 +865,26 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         setStatus(`Deleted ${lb(p.y)} lb from ${fmtLong(p.x)}. Date moved back to ${fmtLong(parse(prevKey))}.`);
       }
       else b.disabled = false;
+    });
+    return b;
+  }
+
+  // "See food" button for a chart point: a deliberate two-tap so you never jump to the
+  // food tab by accident — tap once to confirm, tap again to open that day's food.
+  function foodButton(p) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "seefood"; b.textContent = "See food";
+    b.setAttribute("aria-label", `See food logged on ${fmtLong(p.x)}`);
+    let armed = false, timer;
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      if (!armed) {
+        armed = true; b.textContent = "Tap to open ›"; b.classList.add("armed");
+        timer = setTimeout(() => { armed = false; b.textContent = "See food"; b.classList.remove("armed"); }, 4000);
+        return;
+      }
+      clearTimeout(timer);
+      window.dispatchEvent(new CustomEvent("open-food-day", { detail: { key: p.key } }));
     });
     return b;
   }
@@ -1018,12 +1029,11 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       color: "var(--daily)", lineWidth: 1.75, dot: 3.5,
       empty: "Log your first weigh-in above to start the chart.",
       mark: p => isWorkout(p.key),
-      onHold: p => window.dispatchEvent(new CustomEvent("open-food-day", { detail: { key: p.key } })),
       describe: p => {
         const k = kcalOf(p.key);
         return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged") + (isWorkout(p.key) ? " · workout" : "");
       },
-      action: deleteButton,
+      action: p => { const s = document.createElement("span"); s.style.display = "contents"; s.append(foodButton(p), deleteButton(p)); return s; },
       aria: ps => `Daily weight, ${ps.length} weigh-ins, latest ${lb(ps[ps.length - 1].y)} lb`
     });
     $("dailyLegend").hidden = !daily.some(p => isWorkout(p.key));
@@ -1061,7 +1071,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.4.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.5.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1087,18 +1097,18 @@ window.appPrefs = { glow: true };
 })();
 
 // ================= edge glow =================
-// A smooth line with a fading tail, drawn along the rounded screen edge at a steady speed
-// (a little quicker through the corners). Painted on a canvas so thickness and fade are even.
+// A bright line with a fading tail races once around the rounded screen edge when the app
+// opens, then fades away (a little quicker through the corners). Painted on a canvas.
 (() => {
   const cv = document.getElementById("edgeCanvas"); if (!cv || !cv.getContext) return;
   const ctx = cv.getContext("2d");
-  const LAP_MS = 18000, RADIUS = 55, CORNER_SPEED = 1.25;
-  const BRIGHTNESS = 0.6;
-  // shows for 20 s every 2 minutes (starting when you open the tracker), fading in and out
-  const CYCLE_MS = 120000, SHOW_MS = 20000, FADE_IN_MS = 2500, FADE_OUT_MS = 3000;
-  let vis = 1;                                    // overall strength of the line and glow   // 55 = iPhone 15 Pro corner radius
+  const RADIUS = 55, CORNER_SPEED = 1.25;                   // 55 = iPhone 15 Pro corner radius
+  const BRIGHTNESS = 0.75;
+  // one quick lap around the screen when the app opens, then it fades away
+  const INTRO_MS = 1200, OUTRO_MS = 550;                    // time for one lap, then the fade-out
+  let vis = 1;                                              // overall strength of the line and glow
   const CORE = 7.5, INSET = 4;                              // line thickness, distance from the edge
-  const TAIL_PX = 240, STEP = 1.5;                           // tail length on screen, drawing step
+  const TAIL_PX = 240, STEP = 1.5;                          // tail length on screen, drawing step
   let W = 0, H = 0, dpr = 1, pts = [], total = 0, timeAt = [], color = "#2446A8";
 
   function readColor() {
@@ -1144,11 +1154,13 @@ window.appPrefs = { glow: true };
     while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (timeAt[mid] <= target) lo = mid; else hi = mid - 1; }
     return lo;
   }
-  function draw(frac) {
+  function draw(frac, capTail) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const n = pts.length; if (!n) return;
-    const head = headIndex(frac), tailN = Math.round(TAIL_PX / STEP);
+    const head = headIndex(frac), fullTail = Math.round(TAIL_PX / STEP);
+    // during the opening lap, cap the tail to how far the head has travelled so nothing shows before the start
+    const tailN = capTail ? Math.max(1, Math.min(fullTail, head)) : fullTail;
     // trim everything to the rounded screen shape so the glow is equally wide on edges and corners
     ctx.save();
     ctx.beginPath();
@@ -1181,33 +1193,33 @@ window.appPrefs = { glow: true };
   const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const clear = () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); };
   const ease = x => x * x * (3 - 2 * x);
-  function visibility(t) {
-    const c = t % CYCLE_MS;
-    if (c >= SHOW_MS) return 0;
-    if (c < FADE_IN_MS) return ease(c / FADE_IN_MS);
-    if (c > SHOW_MS - FADE_OUT_MS) return ease((SHOW_MS - c) / FADE_OUT_MS);
-    return 1;
-  }
-  let start = 0, run = 0, sleepTimer = null;   // `run` changes on every on/off so old loops stop
+  const TOTAL_MS = INTRO_MS + OUTRO_MS;
+  let start = 0, run = 0;                       // `run` changes on every on/off so old loops stop
   const tick = (id, now) => {
     if (id !== run) return;
     const t = now - start;
-    vis = visibility(t);
-    if (vis <= 0) {
-      // hidden: clear once and sleep until the next appearance instead of drawing every frame
-      clear();
-      sleepTimer = setTimeout(() => requestAnimationFrame(n => tick(id, n)), CYCLE_MS - (t % CYCLE_MS));
-      return;
-    }
-    draw((t % LAP_MS) / LAP_MS);
+    if (t >= TOTAL_MS) { vis = 0; clear(); return; }              // the one lap is done — stop for good
+    if (t <= INTRO_MS) { vis = 1; draw(t / INTRO_MS, true); }     // the lap: head races around, tail growing behind it
+    else { vis = ease(1 - (t - INTRO_MS) / OUTRO_MS); draw(1, true); }  // then hold at the finish line and fade out
     requestAnimationFrame(n => tick(id, n));
   };
+  // Runs once when the app opens (and again if you switch the edge on in Settings).
   function apply() {
-    const on = window.appPrefs.glow !== false;
-    run++; clearTimeout(sleepTimer); clear();
-    if (!on) return;
-    if (reduced) { vis = 0.6; draw(0.08); return; }
-    start = performance.now();                 // turning it on shows it right away
+    run++; clear();
+    if (window.appPrefs.glow === false) return;
+    if (reduced) {                              // Reduce Motion: a brief static glimmer, no travel
+      start = performance.now(); const id = run;
+      const rt = now => {
+        if (id !== run) return;
+        const t = now - start, HOLD = 500, FADE = 900;
+        if (t >= HOLD + FADE) { vis = 0; clear(); return; }
+        vis = (t < HOLD ? 1 : ease(1 - (t - HOLD) / FADE)) * 0.8;
+        draw(0.12, false);
+        requestAnimationFrame(rt);
+      };
+      requestAnimationFrame(rt); return;
+    }
+    start = performance.now();
     const id = run; requestAnimationFrame(n => tick(id, n));
   }
   let lastOn = null;
