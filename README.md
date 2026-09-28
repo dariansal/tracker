@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="tracker-icon.png" alt="Tracker icon" width="120">
+  <img src="tracker-icon.png" alt="Tracker icon" width="256">
 </p>
 
 # Tracker
