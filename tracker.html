@@ -1003,7 +1003,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.1.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.1.1";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1225,9 +1225,10 @@ window.appPrefs = { glow: true };
   const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
   const r0 = v => Math.round(v);
   const OZ_PER_G = 1 / 28.3495;
-  // Daily protein goal: 1 g per lb of body weight (the 0.9–1.1 g/lb range brackets this).
+  // Daily protein goal is a range: 0.9 to 1.1 g per lb of body weight. You've hit the
+  // goal once you're in the band (at least the low end).
   // The body weight comes from the weight module (window.appShared.goalWeight).
-  const PROTEIN_PER_LB = 1.0;
+  const PROTEIN_LB_LOW = 0.9, PROTEIN_LB_HIGH = 1.1;
   window.addEventListener("weight-updated", () => render());
 
   // Every food is stored by weight: `per` is macros per gram, and `units` says how many
@@ -2199,14 +2200,14 @@ window.appPrefs = { glow: true };
     $("tK").textContent = r0(tot.kcal).toLocaleString();
     $("tP").textContent = `${r0(tot.p)} g`; $("tC").textContent = `${r0(tot.c)} g`; $("tF").textContent = `${r0(tot.f)} g`;
 
-    // Protein goal (needs a body weight from the weight module; hidden until then)
+    // Protein goal range (needs a body weight from the weight module; hidden until then)
     const goalW = (window.appShared || {}).goalWeight;
-    const pGoal = goalW ? Math.round(goalW * PROTEIN_PER_LB) : null;
     const pw = $("pGoalWrap");
-    if (pGoal) {
-      const met = tot.p >= pGoal;
-      $("pBar").style.width = Math.max(0, Math.min(100, tot.p / pGoal * 100)) + "%";
-      $("pGoalTxt").textContent = `${r0(tot.p)} / ${pGoal} g protein` + (met ? " ✓" : "");
+    if (goalW) {
+      const pLow = Math.round(goalW * PROTEIN_LB_LOW), pHigh = Math.round(goalW * PROTEIN_LB_HIGH);
+      const met = tot.p >= pLow;   // in range once you reach the low end
+      $("pBar").style.width = Math.max(0, Math.min(100, tot.p / pLow * 100)) + "%";
+      $("pGoalTxt").textContent = `${r0(tot.p)} / ${pLow}–${pHigh} g protein` + (met ? " ✓" : "");
       pw.classList.toggle("met", met);
       pw.hidden = false;
     } else {

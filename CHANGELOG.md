@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.1.1 (2026-09-28)
+
+- Protein goal is now shown as a **range** rather than a single number: 0.9 to 1.1 grams per pound of body weight (for example, `151–185 g`). The bar fills toward the low end, and the goal counts as met with a check once you reach that low end (i.e. you're in the range).
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.1.0 (2026-09-28)
 
 - Food tab: a **daily protein goal**. A slim bar under the totals fills as you eat protein and marks the goal met with a check. The goal is 1 gram per pound of body weight, taken from the previous completed week's average weight (weeks start Monday); until there is a previous week, it uses your latest weigh-in. It stays hidden until you have logged at least one weigh-in.
