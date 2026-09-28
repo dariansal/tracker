@@ -190,7 +190,7 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 /* food: day bar */
 .daybar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
 .daybar button { min-width: 46px; padding: 0; font-size: 1.3rem; background: var(--card); color: var(--ink); border-color: var(--rule); }
-.daybar .d { font-weight: 600; text-align: center; }
+.daybar .d { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
 .daybar .d small { display: block; font-weight: 400; color: var(--muted); font-size: .85rem; }
 
 /* food: totals */
@@ -211,10 +211,13 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .pscale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .pscale .pmet { color: var(--daily); font-weight: 700; }
 /* workout day toggle + comparison */
-.wko { display: inline-flex; align-items: center; gap: 9px; margin-top: 14px; padding: 9px 15px; border-radius: 999px; border: 1px solid var(--rule); background: var(--card); color: var(--muted); font-weight: 600; font-size: .95rem; min-height: 42px; }
-.wko-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--rule); box-sizing: border-box; }
-.wko[aria-pressed="true"] { border-color: var(--weekly); color: var(--weekly); background: color-mix(in srgb, var(--weekly) 9%, var(--card)); }
-.wko[aria-pressed="true"] .wko-dot { background: var(--weekly); border-color: var(--weekly); }
+.daybar .wko-mini { min-width: 34px; height: 30px; padding: 0 7px; font-size: 1rem; line-height: 1; border-radius: 999px; opacity: .4; filter: grayscale(1); transition: opacity .2s, filter .2s; }
+.daybar .wko-mini[aria-pressed="true"] { opacity: 1; filter: none; border-color: var(--weekly); background: color-mix(in srgb, var(--weekly) 12%, var(--card)); }
+#fDayText { text-align: center; }
+.wko-legend { display: flex; align-items: center; gap: 6px; }
+.lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.lg-dot.solid { background: var(--daily); }
+.lg-dot.open { background: var(--card); border: 1.75px solid var(--daily); box-sizing: border-box; margin-left: 8px; }
 .wkstats .wkrow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; }
 .wkstats .wkrow b { font-size: 1.2rem; }
 .wkstats .wk-n { color: var(--muted); font-size: .85rem; }
@@ -385,6 +388,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     <p class="sub">Every weigh-in you've logged. Tap a point to see that day's weight and calories, or delete it.</p>
     <div class="readout" id="ro-daily"></div>
     <div class="plot" id="plot-daily"></div>
+    <p class="sub wko-legend" id="dailyLegend" hidden><span class="lg-dot solid"></span> workout day <span class="lg-dot open"></span> rest day</p>
   </section>
 
   <section class="chart" aria-labelledby="h-weekly">
@@ -424,7 +428,10 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   <div id="pane-food" role="tabpanel" aria-labelledby="tab-food" hidden>
     <div class="daybar">
       <button type="button" id="fPrev" aria-label="Previous day">‹</button>
-      <div class="d" id="fDay"></div>
+      <div class="d" id="fDay">
+        <span id="fDayText"></span>
+        <button type="button" id="fWorkout" class="wko-mini" aria-pressed="false" aria-label="Mark this day as a workout" title="Workout day">🏋️</button>
+      </div>
       <button type="button" id="fNext" aria-label="Next day">›</button>
     </div>
 
@@ -450,10 +457,6 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         </div>
       </div>
     </div>
-
-    <button type="button" id="fWorkout" class="wko" aria-pressed="false">
-      <span class="wko-dot" aria-hidden="true"></span><span id="fWorkoutTxt">Workout day</span>
-    </button>
 
     <h2 class="sec" style="margin-bottom:22px">Add New Food</h2>
     <div class="searchbox">
@@ -575,6 +578,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   const LS_KEY = "weight-log-v1";
   // calories per day, published by the food section: { "YYYY-MM-DD": kcal }
   const kcalOf = key => ((window.appShared && window.appShared.kcal) || {})[key];
+  // workout days, published by the food section: { "YYYY-MM-DD": true }
+  const isWorkout = key => !!((window.appShared && window.appShared.workouts) || {})[key];
   const fmtK = v => Math.round(v).toLocaleString();
   const LS_PROFILE = "profile-v1";
   let profile = { heightIn: null, age: null };
@@ -795,9 +800,13 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       const d = pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x.getTime()).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
       el("path", { d, fill: "none", stroke: opts.color, "stroke-width": opts.lineWidth, "stroke-linejoin": "round", "stroke-linecap": "round" });
     }
-    // dots
+    // dots (workout days solid, rest days open — only when some day in view is a workout)
     const r = pts.length > 90 ? 2 : opts.dot;
-    pts.forEach(p => el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: opts.color }));
+    const mark = opts.mark || (() => false);
+    const anyMark = pts.some(mark);
+    pts.forEach(p => anyMark && !mark(p)
+      ? el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: "var(--card)", stroke: opts.color, "stroke-width": 1.75 })
+      : el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: opts.color }));
 
     // hover / tap readout
     const guide = el("line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", opacity: 0 });
@@ -996,13 +1005,15 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     drawChart($("plot-daily"), $("ro-daily"), daily, {
       color: "var(--daily)", lineWidth: 1.75, dot: 3.5,
       empty: "Log your first weigh-in above to start the chart.",
+      mark: p => isWorkout(p.key),
       describe: p => {
         const k = kcalOf(p.key);
-        return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged");
+        return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged") + (isWorkout(p.key) ? " · workout" : "");
       },
       action: deleteButton,
       aria: ps => `Daily weight, ${ps.length} weigh-ins, latest ${lb(ps[ps.length - 1].y)} lb`
     });
+    $("dailyLegend").hidden = !daily.some(p => isWorkout(p.key));
     drawChart($("plot-weekly"), $("ro-weekly"), weekly, {
       color: "var(--weekly)", lineWidth: 2.75, dot: 4.5,
       empty: "Your weekly averages will show up here.",
@@ -1037,7 +1048,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.2.1";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.3.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -2249,10 +2260,12 @@ window.appPrefs = { glow: true };
   function publishCalories() {
     const kcal = {};
     Object.keys(days).forEach(k => { const t = (days[k] || []).reduce((a, i) => a + (i.kcal || 0), 0); if (t > 0) kcal[k] = Math.round(t); });
-    const sig = JSON.stringify(kcal);
+    const wk = Object.keys(workouts).filter(k => workouts[k]).sort();
+    const sig = JSON.stringify(kcal) + "|" + wk.join(",");
     if (sig === lastShared) return;
     lastShared = sig;
-    window.appShared = { ...(window.appShared || {}), kcal };
+    const wkMap = {}; wk.forEach(k => wkMap[k] = true);
+    window.appShared = { ...(window.appShared || {}), kcal, workouts: wkMap };
     window.dispatchEvent(new Event("food-updated"));
   }
 
@@ -2281,9 +2294,9 @@ window.appPrefs = { glow: true };
     const pageY = window.scrollY;
     const today = iso(new Date());
     const rel = day === today ? "Today" : day === shift(today, -1) ? "Yesterday" : day === shift(today, 1) ? "Tomorrow" : "";
-    $("fDay").innerHTML = "";
-    $("fDay").append(document.createTextNode(fmtLong(parse(day))));
-    if (rel) { const s = document.createElement("small"); s.textContent = rel; $("fDay").appendChild(s); }
+    $("fDayText").innerHTML = "";
+    $("fDayText").append(document.createTextNode(fmtLong(parse(day))));
+    if (rel) { const s = document.createElement("small"); s.textContent = rel; $("fDayText").appendChild(s); }
 
     $("eatenHead").textContent = day === today ? "Eaten Today" : day === shift(today, -1) ? "Eaten Yesterday"
       : "Eaten on " + parse(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });

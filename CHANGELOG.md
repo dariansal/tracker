@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.3.0 (2026-09-28)
+
+- The workout marker moved from the button under the totals to a small **🏋️ toggle right next to the date** on the Food tab. Tap it to mark the day (it lights up); tap again to clear. Much more minimal, and it sits with the day it belongs to.
+- **Workout days are now shown on the "Day by day" weight chart**: workout days are solid dots, rest days are open (hollow) dots, with a small legend under the chart. Tapping a point also notes "· workout". This makes it easy to see how weight and calories track with your workouts. (The chart looks unchanged until you start marking workout days.)
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.2.1 (2026-09-28)
 
 - Fix: when saving a new food (for example after a scan) with a required field missing, the error (like "Enter the calories for that serving.") now appears **inside the New food panel**, right by the Save button, instead of at the bottom of the screen where it was easy to miss. The field that needs attention is focused.
