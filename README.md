@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="tracker-icon.png" alt="Tracker icon" width="120">
+</p>
+
 # Tracker
 
 A personal weight and nutrition tracker that runs as a Claude artifact on your iPhone. Log your weight, track calories and macros, scan nutrition labels, and see your real maintenance calories from your own results.
