@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.8.0 (2026-09-29)
+
+- You can now **edit the portion of something already in "Eaten Today"** — each entry has an **Edit** button next to Remove. Tap it to change the amount (and unit, or cooking oil), see the new calories/macros update live, and Save. For example, change "1 cup white rice" to "2 cups" instead of adding a second entry. The day's totals and protein bar update automatically.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.7.2 (2026-09-29)
 
 - "Workout days vs rest days" on the Food tab is now a **collapsible section you tap to open and close** (like "All weigh-ins" on the Weight tab), and it starts collapsed.
