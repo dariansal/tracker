@@ -372,7 +372,6 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 
   <section class="chart" aria-labelledby="h-daily">
     <h2 id="h-daily">Day by day</h2>
-    <p class="sub">Every weigh-in you've logged. Tap a point for that day's weight and calories, then "See food" to open that day, or delete it.</p>
     <div class="readout" id="ro-daily"></div>
     <div class="plot" id="plot-daily"></div>
     <p class="sub wko-legend" id="dailyLegend" hidden><span class="lg-dot solid"></span> workout day <span class="lg-dot open"></span> rest day</p>
@@ -792,22 +791,25 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       const d = pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x.getTime()).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
       el("path", { d, fill: "none", stroke: opts.color, "stroke-width": opts.lineWidth, "stroke-linejoin": "round", "stroke-linecap": "round" });
     }
-    // dots (workout days solid, rest days open — only when some day in view is a workout)
+    // dots: workout days stay solid, rest days stay open (shape never changes); the selected
+    // day is shown by colour instead, so you can always tell a workout day from a rest day.
     const r = pts.length > 90 ? 2 : opts.dot;
     const mark = opts.mark || (() => false);
     const anyMark = pts.some(mark);
-    pts.forEach(p => anyMark && !mark(p)
-      ? el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: "var(--card)", stroke: opts.color, "stroke-width": 1.75 })
-      : el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r, fill: opts.color }));
+    const sel = opts.selColor || opts.color;
+    const paintDot = (c, on) => {
+      if (c.__open) { c.setAttribute("fill", "var(--card)"); c.setAttribute("stroke", on ? sel : opts.color); c.setAttribute("stroke-width", 1.75); }
+      else { c.setAttribute("fill", on ? sel : opts.color); c.removeAttribute("stroke"); }
+    };
+    const dots = pts.map(p => { const c = el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r }); c.__open = anyMark && !mark(p); return c; });
 
     // hover / tap readout
     const guide = el("line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", opacity: 0 });
-    const ring = el("circle", { r: r + 4, fill: "none", stroke: opts.color, "stroke-width": 2, opacity: 0 });
     const hit = el("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" });
     const show = p => {
-      const cx = sx(p.x.getTime()), cy = sy(p.y);
+      const cx = sx(p.x.getTime());
       guide.setAttribute("x1", cx); guide.setAttribute("x2", cx); guide.setAttribute("opacity", .6);
-      ring.setAttribute("cx", cx); ring.setAttribute("cy", cy); ring.setAttribute("opacity", 1);
+      dots.forEach((c, i) => paintDot(c, pts[i] === p));
       setReadout(p);
     };
     function setReadout(p) {
@@ -1015,19 +1017,16 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     }
 
     drawChart($("plot-daily"), $("ro-daily"), daily, {
-      color: "var(--daily)", lineWidth: 1.75, dot: 3.5,
+      color: "var(--daily)", selColor: "var(--weekly)", lineWidth: 1.75, dot: 3.5,
       empty: "Log your first weigh-in above to start the chart.",
       mark: p => isWorkout(p.key),
-      describe: p => {
-        const k = kcalOf(p.key);
-        return `${fmtLong(p.x)}: ${lb(p.y)} lb, ` + (k > 0 ? `${fmtK(k)} kcal eaten` : "no food logged") + (isWorkout(p.key) ? " · workout" : "");
-      },
+      describe: p => `${lb(p.y)} lb`,
       action: p => { const s = document.createElement("span"); s.style.display = "contents"; s.append(foodButton(p), deleteButton(p)); return s; },
       aria: ps => `Daily weight, ${ps.length} weigh-ins, latest ${lb(ps[ps.length - 1].y)} lb`
     });
     $("dailyLegend").hidden = !daily.some(p => isWorkout(p.key));
     drawChart($("plot-weekly"), $("ro-weekly"), weekly, {
-      color: "var(--weekly)", lineWidth: 2.75, dot: 4.5,
+      color: "var(--weekly)", selColor: "var(--daily)", lineWidth: 2.75, dot: 4.5,
       empty: "Your weekly averages will show up here.",
       describe: p => {
         const end = new Date(p.x); end.setDate(end.getDate() + 6);
@@ -1060,7 +1059,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.7.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.7.1";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================

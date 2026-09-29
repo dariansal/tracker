@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.7.1 (2026-09-29)
+
+- "Day by day" chart is cleaner: removed the description line under the heading, and tapping a point now shows **only the weight** (the date and calories are available via "See food"). The "See food" and delete buttons are unchanged.
+- The **selected dot is now shown by colour, not shape** — dots keep their workout (solid) / rest (open) look at all times, and the one you tapped turns a highlight colour, so you can always tell workout from rest days even when one is selected.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.7.0 (2026-09-28)
 
 - The app is now **dark only** — removed the light/dark appearance setting entirely (and the sun/moon icon).
