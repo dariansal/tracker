@@ -210,6 +210,7 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .wkstats .wkrow b { font-size: 1.2rem; }
 .wkstats .wk-n { color: var(--muted); font-size: .85rem; }
 .wkstats .wksum { margin: 10px 0 0; color: var(--muted); font-size: .9rem; }
+.wkstats > div { margin-top: 12px; }
 .np-err { margin: 2px 0 12px; color: var(--danger); font-size: .92rem; font-weight: 600; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
@@ -533,10 +534,10 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       <button type="button" id="fCopy" class="ghost" hidden>Copy the day before</button>
     </div>
 
-    <section class="card wkstats" id="wkStats" hidden>
-      <h2 class="sec" style="margin:0 0 10px">Workout days vs rest days</h2>
+    <details class="wkstats" id="wkStats" hidden>
+      <summary>Workout days vs rest days</summary>
       <div id="wkStatsBody"></div>
-    </section>
+    </details>
 
     <div class="sheet-back" id="sheetBack" hidden></div>
     <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
@@ -1059,7 +1060,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.7.1";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.7.2";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================

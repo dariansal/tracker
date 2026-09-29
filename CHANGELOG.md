@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.7.2 (2026-09-29)
+
+- "Workout days vs rest days" on the Food tab is now a **collapsible section you tap to open and close** (like "All weigh-ins" on the Weight tab), and it starts collapsed.
+- Added space above it so it no longer crowds the "Eaten" card.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.7.1 (2026-09-29)
 
 - "Day by day" chart is cleaner: removed the description line under the heading, and tapping a point now shows **only the weight** (the date and calories are available via "See food"). The "See food" and delete buttons are unchanged.
