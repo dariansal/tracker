@@ -137,8 +137,12 @@ table.wk tr:last-child td { border-bottom: 0; }
 table.wk td small { color: var(--muted); }
 .up, .down { color: var(--ink); }
 
-/* glowing line that travels around the edge of the screen */
-.edge-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none; }
+/* appearance: light/dark icon toggle in Settings */
+.themebtn { min-width: 46px; height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: var(--field); color: var(--ink); border: 1px solid var(--rule); border-radius: 12px; transition: color .2s, background .2s; }
+.themebtn svg { display: block; }
+.themebtn .ic-moon { display: none; }
+.themebtn[data-mode="dark"] .ic-sun { display: none; }
+.themebtn[data-mode="dark"] .ic-moon { display: block; }
 
 /* settings */
 .top { position: relative; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 10px !important; }
@@ -349,7 +353,6 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </style>
 </head>
 <body>
-<canvas class="edge-canvas" id="edgeCanvas" aria-hidden="true"></canvas>
 <main>
   <header class="top">
     <h1>Tracker</h1>
@@ -567,10 +570,13 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 <div class="sheet-back" id="setBack" hidden></div>
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
   <b id="setTitle">Settings</b>
-  <label class="setrow" for="prefGlow">
-    <span class="settext"><span>Glowing edge</span><small>A line that races once around the screen when you open the tracker, then fades. Flip this to see it again.</small></span>
-    <input type="checkbox" id="prefGlow" class="toggle" role="switch">
-  </label>
+  <div class="setrow">
+    <span class="settext"><span>Appearance</span><small>Tap to switch between light and dark. Starts matching your device.</small></span>
+    <button type="button" id="themeBtn" class="themebtn" aria-label="Switch between light and dark">
+      <svg class="ic-sun" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="ic-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/></svg>
+    </button>
+  </div>
   <button type="button" id="setDone" class="sheet-btn">Done</button>
   <small class="appver" id="appVersion"></small>
 </div>
@@ -1071,11 +1077,11 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.5.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.6.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
-window.appPrefs = { glow: true };
+window.appPrefs = { theme: "system" };   // "system" (follow the device), "light", or "dark"
 (() => {
   const LS = "prefs-v1";
   try { Object.assign(window.appPrefs, JSON.parse(localStorage.getItem(LS) || "{}")); } catch {}
@@ -1096,135 +1102,17 @@ window.appPrefs = { glow: true };
   })();
 })();
 
-// ================= edge glow =================
-// A bright line with a fading tail races once around the rounded screen edge when the app
-// opens, then fades away (a little quicker through the corners). Painted on a canvas.
+// ================= appearance (light / dark) =================
+// Sets data-theme on <html>: "light"/"dark" force it, "system" follows the device.
 (() => {
-  const cv = document.getElementById("edgeCanvas"); if (!cv || !cv.getContext) return;
-  const ctx = cv.getContext("2d");
-  const RADIUS = 55, CORNER_SPEED = 1.25;                   // 55 = iPhone 15 Pro corner radius
-  const BRIGHTNESS = 0.75;
-  // one quick lap around the screen when the app opens, then it fades away
-  const INTRO_MS = 1200, OUTRO_MS = 550;                    // time for one lap, then the fade-out
-  let vis = 1;                                              // overall strength of the line and glow
-  const CORE = 7.5, INSET = 4;                              // line thickness, distance from the edge
-  const TAIL_PX = 240, STEP = 1.5;                          // tail length on screen, drawing step
-  let W = 0, H = 0, dpr = 1, pts = [], total = 0, timeAt = [], color = "#2446A8";
-
-  function readColor() {
-    const c = getComputedStyle(document.documentElement).getPropertyValue("--weekly").trim();
-    if (c) color = c;
-  }
-  // sample the rounded-rectangle edge every STEP px, remembering which samples are in a corner
-  function build() {
-    dpr = Math.min(window.devicePixelRatio || 1, 3);
-    W = window.innerWidth; H = window.innerHeight;
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    const x0 = INSET, y0 = INSET, x1 = W - INSET, y1 = H - INSET;
-    const r = Math.min(RADIUS - INSET, (x1 - x0) / 2, (y1 - y0) / 2);
-    const segs = [
-      { t: "line", a: [x0 + r, y0], b: [x1 - r, y0] },
-      { t: "arc", c: [x1 - r, y0 + r], s: -Math.PI / 2, e: 0 },
-      { t: "line", a: [x1, y0 + r], b: [x1, y1 - r] },
-      { t: "arc", c: [x1 - r, y1 - r], s: 0, e: Math.PI / 2 },
-      { t: "line", a: [x1 - r, y1], b: [x0 + r, y1] },
-      { t: "arc", c: [x0 + r, y1 - r], s: Math.PI / 2, e: Math.PI },
-      { t: "line", a: [x0, y1 - r], b: [x0, y0 + r] },
-      { t: "arc", c: [x0 + r, y0 + r], s: Math.PI, e: Math.PI * 1.5 },
-    ];
-    pts = []; timeAt = []; total = 0;
-    let t = 0;
-    for (const sg of segs) {
-      const len = sg.t === "line" ? Math.hypot(sg.b[0] - sg.a[0], sg.b[1] - sg.a[1]) : r * (sg.e - sg.s);
-      const n = Math.max(1, Math.round(len / STEP));
-      for (let k = 0; k < n; k++) {
-        const f = k / n;
-        const p = sg.t === "line" ? [sg.a[0] + (sg.b[0] - sg.a[0]) * f, sg.a[1] + (sg.b[1] - sg.a[1]) * f]
-          : [sg.c[0] + r * Math.cos(sg.s + (sg.e - sg.s) * f), sg.c[1] + r * Math.sin(sg.s + (sg.e - sg.s) * f)];
-        pts.push(p); timeAt.push(t);
-        t += (len / n) / (sg.t === "arc" ? CORNER_SPEED : 1);
-      }
-    }
-    total = t; readColor();
-  }
-  // which sample the head is on, for a fraction of the lap (time-weighted, so corners are a bit quicker)
-  function headIndex(frac) {
-    const target = frac * total;
-    let lo = 0, hi = timeAt.length - 1;
-    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (timeAt[mid] <= target) lo = mid; else hi = mid - 1; }
-    return lo;
-  }
-  function draw(frac, capTail) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    const n = pts.length; if (!n) return;
-    const head = headIndex(frac), fullTail = Math.round(TAIL_PX / STEP);
-    // during the opening lap, cap the tail to how far the head has travelled so nothing shows before the start
-    const tailN = capTail ? Math.max(1, Math.min(fullTail, head)) : fullTail;
-    // trim everything to the rounded screen shape so the glow is equally wide on edges and corners
-    ctx.save();
-    ctx.beginPath();
-    const R = RADIUS;
-    ctx.moveTo(R, 0); ctx.lineTo(W - R, 0); ctx.arc(W - R, R, R, -Math.PI / 2, 0);
-    ctx.lineTo(W, H - R); ctx.arc(W - R, H - R, R, 0, Math.PI / 2);
-    ctx.lineTo(R, H); ctx.arc(R, H - R, R, Math.PI / 2, Math.PI);
-    ctx.lineTo(0, R); ctx.arc(R, R, R, Math.PI, Math.PI * 1.5);
-    ctx.closePath(); ctx.clip();
-    ctx.strokeStyle = color; ctx.lineCap = "butt"; ctx.lineJoin = "round";
-    // soft glow first (wide and faint), then the crisp core; both fade smoothly toward the tail end
-    for (const [width, strength] of [[42, 0.045], [34.5, 0.055], [27, 0.07], [19.5, 0.09], [13.5, 0.14], [CORE, 1]]) {
-      ctx.lineWidth = width;
-      for (let j = tailN - 1; j >= 0; j--) {
-        const a = pts[((head - j) % n + n) % n], b = pts[((head - j - 1) % n + n) % n];
-        const fade = Math.pow(1 - j / tailN, 1.8);
-        ctx.globalAlpha = strength * fade * BRIGHTNESS * vis;
-        ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.lineTo(a[0], a[1]); ctx.stroke();
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-  build();
-  window.addEventListener("resize", () => { build(); });
-  if (window.matchMedia) {
-    const mq = matchMedia("(prefers-color-scheme: dark)");
-    (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(readColor);
-  }
-  const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const clear = () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); };
-  const ease = x => x * x * (3 - 2 * x);
-  const TOTAL_MS = INTRO_MS + OUTRO_MS;
-  let start = 0, run = 0;                       // `run` changes on every on/off so old loops stop
-  const tick = (id, now) => {
-    if (id !== run) return;
-    const t = now - start;
-    if (t >= TOTAL_MS) { vis = 0; clear(); return; }              // the one lap is done — stop for good
-    if (t <= INTRO_MS) { vis = 1; draw(t / INTRO_MS, true); }     // the lap: head races around, tail growing behind it
-    else { vis = ease(1 - (t - INTRO_MS) / OUTRO_MS); draw(1, true); }  // then hold at the finish line and fade out
-    requestAnimationFrame(n => tick(id, n));
-  };
-  // Runs once when the app opens (and again if you switch the edge on in Settings).
+  const root = document.documentElement;
   function apply() {
-    run++; clear();
-    if (window.appPrefs.glow === false) return;
-    if (reduced) {                              // Reduce Motion: a brief static glimmer, no travel
-      start = performance.now(); const id = run;
-      const rt = now => {
-        if (id !== run) return;
-        const t = now - start, HOLD = 500, FADE = 900;
-        if (t >= HOLD + FADE) { vis = 0; clear(); return; }
-        vis = (t < HOLD ? 1 : ease(1 - (t - HOLD) / FADE)) * 0.8;
-        draw(0.12, false);
-        requestAnimationFrame(rt);
-      };
-      requestAnimationFrame(rt); return;
-    }
-    start = performance.now();
-    const id = run; requestAnimationFrame(n => tick(id, n));
+    const t = window.appPrefs.theme;
+    if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
+    else root.removeAttribute("data-theme");
   }
-  let lastOn = null;
-  window.addEventListener("prefs-changed", () => { const on = window.appPrefs.glow !== false; if (on !== lastOn) { lastOn = on; apply(); } });
-  lastOn = window.appPrefs.glow !== false; apply();
+  window.addEventListener("prefs-changed", apply);
+  apply();
 })();
 
 // ================= settings panel =================
@@ -1232,8 +1120,20 @@ window.appPrefs = { glow: true };
   const $ = id => document.getElementById(id);
   const back = $("setBack"), sheet = $("setSheet");
   let armed = false;
+  // appearance: sun in light mode, moon in dark; tap flips light<->dark (starts following the device)
+  const mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
+  const effMode = () => {
+    const t = window.appPrefs.theme;
+    if (t === "light" || t === "dark") return t;
+    return mq && mq.matches ? "dark" : "light";
+  };
+  const syncTheme = () => { $("themeBtn").dataset.mode = effMode(); };
+  $("themeBtn").addEventListener("click", () => { window.setPref("theme", effMode() === "dark" ? "light" : "dark"); syncTheme(); });
+  window.addEventListener("prefs-changed", syncTheme);
+  if (mq) (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(syncTheme);
+  syncTheme();
   function open() {
-    $("prefGlow").checked = window.appPrefs.glow !== false;
+    syncTheme();
     back.hidden = false; sheet.hidden = false; armed = false;
     requestAnimationFrame(() => { back.classList.add("show"); sheet.classList.add("show"); });
     $("setDone").focus({ preventScroll: true });
@@ -1248,8 +1148,6 @@ window.appPrefs = { glow: true };
   back.addEventListener("pointerdown", () => { armed = true; });
   back.addEventListener("click", () => { if (armed) close(); armed = false; });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheet.hidden) close(); });
-  $("prefGlow").addEventListener("change", e => window.setPref("glow", e.target.checked));
-  window.addEventListener("prefs-changed", () => { $("prefGlow").checked = window.appPrefs.glow !== false; });
 })();
 
 // ================= tabs =================

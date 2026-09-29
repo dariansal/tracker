@@ -27,7 +27,7 @@ This Claude Code session may be signed in to a **different Claude account** from
 - Keep it one self-contained HTML file, within claude.ai's content-security policy (scripts only from cdnjs.cloudflare.com, cdn.jsdelivr.net/npm, cdn.tailwindcss.com, code.jquery.com; no other network requests). Details in `ARCHITECTURE.md`.
 - Every feature must still work when `window.claude.use()` returns `null` (fall back to localStorage and built-in logic).
 - Stay backward compatible with stored data (`ARCHITECTURE.md` §4), so updates never lose anyone's data. If a stored format must change, convert old data on load, like `normalizeFood()` does.
-- Keep the owner's deliberate choices (`ARCHITECTURE.md` §5) unless they ask to change them: the standard units, two-tap deletes, no `confirm()`, the glow's tuned numbers, and so on.
+- Keep the owner's deliberate choices (`ARCHITECTURE.md` §5) unless they ask to change them: the standard units, two-tap deletes, no `confirm()`, and so on.
 - Declare any `let`/`const` that the startup `render()` touches **before** that first call (`ARCHITECTURE.md` §7).
 - Mobile first: test at 393 × 852 and in dark mode.
 

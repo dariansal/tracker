@@ -31,12 +31,12 @@ Search for these markers; line numbers drift.
 | Part | Marker | What it does |
 |---|---|---|
 | Styles | `<style>` | Theme tokens on `:root` (light and dark), layout, components. Colors: `--weekly` (primary blue), `--daily` (sage). |
-| Markup | `<main>` | Header (title "Tracker", tab switcher, gear), `#pane-weight`, `#pane-food`, then the settings sheet and the edge-glow `<canvas>`. |
+| Markup | `<main>` | Header (title "Tracker", tab switcher, gear), `#pane-weight`, `#pane-food`, then the settings sheet. |
 | Weight module | first `<script>` | IIFE: weigh-ins, charts, weekly table, maintenance estimate, height and age profile. |
 | Version | `// ===== version` | `APP_VERSION`, shown at the bottom of Settings. |
-| Preferences | `// ===== preferences` | `window.appPrefs` (for example `glow`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
-| Edge glow | `// ===== edge glow` | Canvas animation around the screen edge (see section 6). |
-| Settings panel | `// ===== settings panel` | Gear button, bottom sheet, glow switch. |
+| Preferences | `// ===== preferences` | `window.appPrefs` (for example `theme`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
+| Appearance | `// ===== appearance` | Sets `data-theme` on `<html>` from `appPrefs.theme` (`light`/`dark` force it, `system` follows the device). |
+| Settings panel | `// ===== settings panel` | Gear button, bottom sheet, appearance (sun/moon) toggle. |
 | Tabs | `// ===== tabs` | Weight/Food switcher with a gliding pill; remembers the last tab (localStorage `log-tab`). |
 | Food module | `// ===== food` | IIFE containing everything below. |
 | ↳ storage | `// ---------- storage` | Load and save days and foods; db with localStorage fallback. |
@@ -58,7 +58,7 @@ Stored in the artifact `db` (see `SETUP-FOR-CLAUDE.md` for the exact document la
 - **Food log:** `food/<YYYY-MM-DD>` → `{ date, items }`. Each item is a **snapshot**: `{ id, food, name, amount, unit, oil, kcal, p, c, f }`. Editing or deleting a food never changes past days.
 - **Foods:** `settings/foods` → `{ foods: [...] }`. Every food is stored **by weight**: `per` is kcal, p, c, f **per gram**, and `units` maps each unit to grams: `g: 1`, `oz: 28.3495`, `lb: 453.592`, optional `cup`, `tbsp` (always `cup / 16`), and optional `each` (weight of one whole item). `def` is the default serving `{ amount, unit }`. `cooked: true` adds an "Olive oil (tbsp)" field when logging (1 tbsp = 13.5 g, macros from the food with id `oil`, or built-in olive oil values).
 - `normalizeFood()` converts older formats (per-unit macros, units like "banana" or "scoop") into this shape on load. Keep it working.
-- **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ glow }`.
+- **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ theme }` (`"system"`, `"light"`, or `"dark"`).
 - **Workout days:** `settings/workouts` → `{ dates: ["YYYY-MM-DD", ...] }`. Just a set of dates the owner marked as a workout day; kept separate from the food log so it never affects logged items or weigh-ins. Used for the "Workout days vs rest days" calorie comparison on the food tab.
 - **localStorage keys:** `weight-log-v1`, `food-days-v1`, `food-lib-v1`, `food-workouts-v1`, `profile-v1`, `prefs-v1` (fallbacks, moved into the db when it connects), plus `log-tab`.
 
@@ -92,15 +92,14 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 3. The text goes to `sample.json` to be turned into numbers. If that fails, `parseLabel()` handles common OCR errors ("g" read as "9", "O" read as "0"), picking the reading whose protein, carbs, and fat best match the printed calories.
 4. The serving is converted to the standard units: countable servings like "1 scoop (46g)" become **whole**; cups and tablespoons are kept, with grams per cup worked out; everything else becomes grams. The suggested name appears as gray placeholder text, and **space accepts it**.
 
-**Settings (gear):** the "Glowing edge" switch (saved to the account) and the version number.
+**Settings (gear):** the **Appearance** toggle (saved to the account) and the version number.
 
-**Edge glow** (canvas, only while the switch is on): when the app opens, a line **races once around** the rounded screen edge (`INTRO_MS` 1200 ms), a little faster through the corners (`CORNER_SPEED 1.25`), its tail growing behind it (capped so nothing shows before the start), then it holds at the finish and **fades away** (`OUTRO_MS` 550 ms) and stops for good — no recurring cycle. Brightness 0.75, core 7.5 px (inset 4), tail 240 px, corner radius 55 (iPhone 15 Pro), clipped to the rounded screen shape so the thickness is even everywhere. Turning the switch on in Settings replays it. With Reduce Motion on, it shows a brief static glimmer that fades (no travel). The owner tuned these numbers; don't change them unless asked.
+**Appearance** (light/dark): a single icon button in Settings — a **sun in light mode, a moon in dark mode**. It reflects the *effective* mode: `appPrefs.theme` when it's `light`/`dark`, otherwise the device's `prefers-color-scheme`. Tapping it sets `theme` to the opposite explicit value (so it stops following the device once tapped). The appearance module applies `data-theme` on `<html>`; the CSS themes (`:root`, `:root:not([data-theme="light"])` under the dark media query, and `:root[data-theme="dark"]`) do the rest, so every color is a token that flips with it. A fresh install has `theme: "system"`, so it matches the device until the first tap.
 
 ## 6. Known limits
 
 - **Haptics:** there's no web API for vibration on iPhone. The hidden `<input switch>` trick (iOS 18) is attempted when a finger lifts after a hold, but it doesn't fire inside Claude's viewer. The owner confirmed it doesn't work. Android uses `navigator.vibrate`.
 - **Photos to Claude:** on the owner's phone, `sample` has no image support, which is why the phone-side reader exists.
-- **The top of the screen** belongs to Claude's viewer; the glow can't reach it.
 - **Camera permission:** if the camera shows black, that's the iOS camera permission for the app or Safari, not the page.
 
 ## 7. Bugs we've hit before (check for these)
