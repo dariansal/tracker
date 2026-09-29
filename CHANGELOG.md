@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.6.1 (2026-09-28)
+
+- Refined the Appearance sun/moon into thinner, cleaner line icons (lighter stroke, tidier proportions) to match the rest of the app's icons.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.6.0 (2026-09-28)
 
 - Removed the glowing edge entirely.
