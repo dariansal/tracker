@@ -9,30 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper: #EEF2F3;
-  --card: #FFFFFF;
-  --ink: #1B2638;
-  --muted: #5E6B7D;
-  --rule: #D5DDE2;
-  --daily: #7FA7A0;
-  --weekly: #2446A8;
-  --danger: #B3363A;
-  --field: #F6F8F9;
+  /* dark only */
+  --paper: #10161F; --card: #18212D; --ink: #E6ECF2; --muted: #93A1B3;
+  --rule: #2A3646; --daily: #6FA89E; --weekly: #8FA9FF; --danger: #F08A8D; --field: #121A24;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #10161F; --card: #18212D; --ink: #E6ECF2; --muted: #93A1B3;
-    --rule: #2A3646; --daily: #6FA89E; --weekly: #8FA9FF; --danger: #F08A8D; --field: #121A24;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --paper: #10161F; --card: #18212D; --ink: #E6ECF2; --muted: #93A1B3;
-  --rule: #2A3646; --daily: #6FA89E; --weekly: #8FA9FF; --danger: #F08A8D; --field: #121A24;
   color-scheme: dark;
 }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
@@ -137,12 +119,11 @@ table.wk tr:last-child td { border-bottom: 0; }
 table.wk td small { color: var(--muted); }
 .up, .down { color: var(--ink); }
 
-/* appearance: light/dark icon toggle in Settings */
-.themebtn { min-width: 46px; height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: var(--field); color: var(--ink); border: 1px solid var(--rule); border-radius: 12px; transition: color .2s, background .2s; }
-.themebtn svg { display: block; }
-.themebtn .ic-moon { display: none; }
-.themebtn[data-mode="dark"] .ic-sun { display: none; }
-.themebtn[data-mode="dark"] .ic-moon { display: block; }
+/* protein goal range control in Settings */
+.setrow-col { flex-direction: column; align-items: stretch; gap: 10px; cursor: default; }
+.prange { display: flex; align-items: center; gap: 8px; }
+.prange input { width: 76px; text-align: center; font-size: 16px; padding: 8px 6px; background: var(--field); color: var(--ink); border: 1px solid var(--rule); border-radius: 10px; }
+.prange .sep, .prange .unit { color: var(--muted); font-size: .92rem; }
 
 /* settings */
 .top { position: relative; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 10px !important; }
@@ -570,12 +551,14 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 <div class="sheet-back" id="setBack" hidden></div>
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
   <b id="setTitle">Settings</b>
-  <div class="setrow">
-    <span class="settext"><span>Appearance</span><small>Tap to switch between light and dark. Starts matching your device.</small></span>
-    <button type="button" id="themeBtn" class="themebtn" aria-label="Switch between light and dark">
-      <svg class="ic-sun" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.6"/><path d="M12 2.9v1.8M12 19.3v1.8M4.7 4.7l1.3 1.3M18 18l1.3 1.3M2.9 12h1.8M19.3 12h1.8M4.7 19.3l1.3-1.3M18 6l1.3-1.3"/></svg>
-      <svg class="ic-moon" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 13.7A7.7 7.7 0 1 1 10.3 3.5 6 6 0 0 0 20.5 13.7Z"/></svg>
-    </button>
+  <div class="setrow setrow-col">
+    <span class="settext"><span>Protein goal</span><small>Your daily target range, in grams of protein per pound of body weight.</small></span>
+    <div class="prange">
+      <input id="pLowInput" type="number" inputmode="decimal" step="0.05" min="0.1" aria-label="Low end of protein goal, grams per pound">
+      <span class="sep">to</span>
+      <input id="pHighInput" type="number" inputmode="decimal" step="0.05" min="0.1" aria-label="High end of protein goal, grams per pound">
+      <span class="unit">g / lb</span>
+    </div>
   </div>
   <button type="button" id="setDone" class="sheet-btn">Done</button>
   <small class="appver" id="appVersion"></small>
@@ -1077,11 +1060,11 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.6.1";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.7.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
-window.appPrefs = { theme: "system" };   // "system" (follow the device), "light", or "dark"
+window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range, g per lb of body weight
 (() => {
   const LS = "prefs-v1";
   try { Object.assign(window.appPrefs, JSON.parse(localStorage.getItem(LS) || "{}")); } catch {}
@@ -1102,38 +1085,21 @@ window.appPrefs = { theme: "system" };   // "system" (follow the device), "light
   })();
 })();
 
-// ================= appearance (light / dark) =================
-// Sets data-theme on <html>: "light"/"dark" force it, "system" follows the device.
-(() => {
-  const root = document.documentElement;
-  function apply() {
-    const t = window.appPrefs.theme;
-    if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
-    else root.removeAttribute("data-theme");
-  }
-  window.addEventListener("prefs-changed", apply);
-  apply();
-})();
-
 // ================= settings panel =================
 (() => {
   const $ = id => document.getElementById(id);
   const back = $("setBack"), sheet = $("setSheet");
   let armed = false;
-  // appearance: sun in light mode, moon in dark; tap flips light<->dark (starts following the device)
-  const mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
-  const effMode = () => {
-    const t = window.appPrefs.theme;
-    if (t === "light" || t === "dark") return t;
-    return mq && mq.matches ? "dark" : "light";
-  };
-  const syncTheme = () => { $("themeBtn").dataset.mode = effMode(); };
-  $("themeBtn").addEventListener("click", () => { window.setPref("theme", effMode() === "dark" ? "light" : "dark"); syncTheme(); });
-  window.addEventListener("prefs-changed", syncTheme);
-  if (mq) (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(syncTheme);
-  syncTheme();
+  // protein goal range inputs (g of protein per lb of body weight)
+  const lo = $("pLowInput"), hi = $("pHighInput");
+  function fillProtein() {
+    lo.value = window.appPrefs.proteinLow ?? 0.9;
+    hi.value = window.appPrefs.proteinHigh ?? 1.1;
+  }
+  lo.addEventListener("change", () => { const v = parseFloat(lo.value); if (v > 0) window.setPref("proteinLow", v); else fillProtein(); });
+  hi.addEventListener("change", () => { const v = parseFloat(hi.value); if (v > 0) window.setPref("proteinHigh", v); else fillProtein(); });
   function open() {
-    syncTheme();
+    fillProtein();
     back.hidden = false; sheet.hidden = false; armed = false;
     requestAnimationFrame(() => { back.classList.add("show"); sheet.classList.add("show"); });
     $("setDone").focus({ preventScroll: true });
@@ -1193,11 +1159,12 @@ window.appPrefs = { theme: "system" };   // "system" (follow the device), "light
   const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
   const r0 = v => Math.round(v);
   const OZ_PER_G = 1 / 28.3495;
-  // Daily protein goal is a range: 0.9 to 1.1 g per lb of body weight. You've hit the
-  // goal once you're in the band (at least the low end).
+  // Daily protein goal is a range in g per lb of body weight (defaults 0.9–1.1, editable in
+  // Settings via window.appPrefs.proteinLow/High). You've hit the goal once you're in the band.
   // The body weight comes from the weight module (window.appShared.goalWeight).
   const PROTEIN_LB_LOW = 0.9, PROTEIN_LB_HIGH = 1.1;
   window.addEventListener("weight-updated", () => render());
+  window.addEventListener("prefs-changed", () => render());
 
   // Every food is stored by weight: `per` is macros per gram, and `units` says how many
   // grams one gram / ounce / pound / cup is. Cups need to know what a cup of that food weighs.
@@ -2241,7 +2208,8 @@ window.appPrefs = { theme: "system" };   // "system" (follow the device), "light
     const goalW = (window.appShared || {}).goalWeight;
     const pw = $("pGoalWrap");
     if (goalW) {
-      const pLow = Math.round(goalW * PROTEIN_LB_LOW), pHigh = Math.round(goalW * PROTEIN_LB_HIGH);
+      const loMult = +window.appPrefs.proteinLow || PROTEIN_LB_LOW, hiMult = +window.appPrefs.proteinHigh || PROTEIN_LB_HIGH;
+      const pLow = Math.round(goalW * Math.min(loMult, hiMult)), pHigh = Math.round(goalW * Math.max(loMult, hiMult));
       const trackMax = pHigh * 1.2;   // a little room past the high end so the top post isn't at the edge
       const lowPct = pLow / trackMax * 100, highPct = pHigh / trackMax * 100;
       const met = tot.p >= pLow;      // in range once you reach the low end

@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.7.0 (2026-09-28)
+
+- The app is now **dark only** — removed the light/dark appearance setting entirely (and the sun/moon icon).
+- New **Protein goal** setting: set your target range in grams of protein per pound of body weight (two inputs, "0.9 to 1.1"). Defaults to 0.9–1.1. The goal bar on the Food tab updates to whatever you set.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.6.1 (2026-09-28)
 
 - Refined the Appearance sun/moon into thinner, cleaner line icons (lighter stroke, tidier proportions) to match the rest of the app's icons.

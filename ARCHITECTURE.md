@@ -30,12 +30,11 @@ Search for these markers; line numbers drift.
 
 | Part | Marker | What it does |
 |---|---|---|
-| Styles | `<style>` | Theme tokens on `:root` (light and dark), layout, components. Colors: `--weekly` (primary blue), `--daily` (sage). |
+| Styles | `<style>` | Theme tokens on `:root` (dark only), layout, components. Colors: `--weekly` (primary blue), `--daily` (sage). |
 | Markup | `<main>` | Header (title "Tracker", tab switcher, gear), `#pane-weight`, `#pane-food`, then the settings sheet. |
 | Weight module | first `<script>` | IIFE: weigh-ins, charts, weekly table, maintenance estimate, height and age profile. |
 | Version | `// ===== version` | `APP_VERSION`, shown at the bottom of Settings. |
-| Preferences | `// ===== preferences` | `window.appPrefs` (for example `theme`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
-| Appearance | `// ===== appearance` | Sets `data-theme` on `<html>` from `appPrefs.theme` (`light`/`dark` force it, `system` follows the device). |
+| Preferences | `// ===== preferences` | `window.appPrefs` (`proteinLow`, `proteinHigh`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
 | Settings panel | `// ===== settings panel` | Gear button, bottom sheet, appearance (sun/moon) toggle. |
 | Tabs | `// ===== tabs` | Weight/Food switcher with a gliding pill; remembers the last tab (localStorage `log-tab`). |
 | Food module | `// ===== food` | IIFE containing everything below. |
@@ -58,7 +57,7 @@ Stored in the artifact `db` (see `SETUP-FOR-CLAUDE.md` for the exact document la
 - **Food log:** `food/<YYYY-MM-DD>` → `{ date, items }`. Each item is a **snapshot**: `{ id, food, name, amount, unit, oil, kcal, p, c, f }`. Editing or deleting a food never changes past days.
 - **Foods:** `settings/foods` → `{ foods: [...] }`. Every food is stored **by weight**: `per` is kcal, p, c, f **per gram**, and `units` maps each unit to grams: `g: 1`, `oz: 28.3495`, `lb: 453.592`, optional `cup`, `tbsp` (always `cup / 16`), and optional `each` (weight of one whole item). `def` is the default serving `{ amount, unit }`. `cooked: true` adds an "Olive oil (tbsp)" field when logging (1 tbsp = 13.5 g, macros from the food with id `oil`, or built-in olive oil values).
 - `normalizeFood()` converts older formats (per-unit macros, units like "banana" or "scoop") into this shape on load. Keep it working.
-- **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ theme }` (`"system"`, `"light"`, or `"dark"`).
+- **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ proteinLow, proteinHigh }` (protein goal range, g per lb; defaults 0.9 and 1.1).
 - **Workout days:** `settings/workouts` → `{ dates: ["YYYY-MM-DD", ...] }`. Just a set of dates the owner marked as a workout day; kept separate from the food log so it never affects logged items or weigh-ins. Used for the "Workout days vs rest days" calorie comparison on the food tab.
 - **localStorage keys:** `weight-log-v1`, `food-days-v1`, `food-lib-v1`, `food-workouts-v1`, `profile-v1`, `prefs-v1` (fallbacks, moved into the db when it connects), plus `log-tab`.
 
@@ -92,9 +91,11 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 3. The text goes to `sample.json` to be turned into numbers. If that fails, `parseLabel()` handles common OCR errors ("g" read as "9", "O" read as "0"), picking the reading whose protein, carbs, and fat best match the printed calories.
 4. The serving is converted to the standard units: countable servings like "1 scoop (46g)" become **whole**; cups and tablespoons are kept, with grams per cup worked out; everything else becomes grams. The suggested name appears as gray placeholder text, and **space accepts it**.
 
-**Settings (gear):** the **Appearance** toggle (saved to the account) and the version number.
+**Settings (gear):** the **Protein goal** range inputs (saved to the account) and the version number.
 
-**Appearance** (light/dark): a single icon button in Settings — a **sun in light mode, a moon in dark mode**. It reflects the *effective* mode: `appPrefs.theme` when it's `light`/`dark`, otherwise the device's `prefers-color-scheme`. Tapping it sets `theme` to the opposite explicit value (so it stops following the device once tapped). The appearance module applies `data-theme` on `<html>`; the CSS themes (`:root`, `:root:not([data-theme="light"])` under the dark media query, and `:root[data-theme="dark"]`) do the rest, so every color is a token that flips with it. A fresh install has `theme: "system"`, so it matches the device until the first tap.
+**Appearance:** the app is **dark only** — the tokens on `:root` are the dark palette and there is no light theme or toggle.
+
+**Protein goal setting:** two number inputs (low and high, g of protein per lb of body weight), saved to `appPrefs.proteinLow/High` (defaults 0.9 and 1.1). The food module reads them when drawing the goal bar and takes `min`/`max` so the range stays sensible even if low > high is entered; a `prefs-changed` listener re-renders the food tab when they change.
 
 ## 6. Known limits
 
@@ -117,7 +118,7 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 
 - `python3 tools/dev_server.py` → http://localhost:8000 serves `tracker.html` with the assets hooked up. Add **`?mock=1`** to inject `tools/mock-claude.js` (a localStorage-backed stand-in for `db`, and a `sample` with no images that always fails, like being offline), so the database code paths run.
 - Test at iPhone size (393 × 852). Playwright with `devices['iPhone 13']` works well, including touch events for holds and double-taps.
-- Before any release, check: the page loads with no console errors, in both light and dark mode; logging, editing, deleting, and renaming work; a scan fills the form; search returns results; and reloading keeps your data (with `?mock=1`).
+- Before any release, check: the page loads with no console errors (dark only); logging, editing, deleting, and renaming work; a scan fills the form; search returns results; and reloading keeps your data (with `?mock=1`).
 - What can't be tested locally: the real claude.ai database and access rules, real Claude calls, and the content-security policy. After a release, the owner updates their install and checks those on the phone.
 
 ## 9. Releasing
