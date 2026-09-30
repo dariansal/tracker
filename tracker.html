@@ -215,8 +215,10 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
 /* food: quick add */
-.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-.quick button { background: var(--card); color: var(--ink); border-color: var(--rule); font-weight: 500; text-align: left; padding: 10px 12px; line-height: 1.25; }
+.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.quick button { background: var(--card); color: var(--ink); border-color: var(--rule); font-weight: 500; text-align: left; padding: 8px 10px; font-size: .92rem; line-height: 1.2; }
+.quickwrap { max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; margin-top: 10px; padding: 1px; }
+.foods-empty { color: var(--muted); padding: 8px 2px; margin: 0; }
 .quick button small { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; margin-top: 2px; }
 .quick button[aria-pressed="true"] { border-color: var(--weekly); box-shadow: inset 0 0 0 1px var(--weekly); }
 .adder { margin-top: 10px; }
@@ -491,8 +493,15 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         </div>
       </div>
     </div>
-    <h2 class="sec">Foods</h2>
-    <div class="quick" id="quick"></div>
+    <h2 class="sec" style="margin-bottom:10px">Foods</h2>
+    <div class="searchbox">
+      <svg class="sico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="foodFilter" placeholder="Filter your foods" autocomplete="off" enterkeyhint="search" aria-label="Filter your foods">
+    </div>
+    <div class="quickwrap">
+      <div class="quick" id="quick"></div>
+      <p class="foods-empty" id="foodsEmpty" hidden>No foods match.</p>
+    </div>
     <div class="card adder" id="adder" hidden>
       <div class="adder-head">
         <div class="namerow">
@@ -1064,7 +1073,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.8.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.9.0";   // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1235,6 +1244,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let db = null, mode = "local";
   let selected = null;      // food id open in the adder
   let entryDraft = null;    // { id, amount, unit, oil } while editing a logged entry's portion
+  let foodFilter = "";      // text typed in the "Filter your foods" box
   let lastTap = { id: null, t: 0 }, tileRenaming = null;   // double-tap-to-rename state
   let lastShared = "";      // last calorie map sent to the weight section
 
@@ -1343,6 +1353,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   $("fPrev").addEventListener("click", () => { releaseSpacer(); entryDraft = null; day = shift(day, -1); closeAdder(); render(); });
   $("fNext").addEventListener("click", () => { releaseSpacer(); entryDraft = null; day = shift(day, 1); closeAdder(); render(); });
 
+  // ---------- filter your foods ----------
+  $("foodFilter").addEventListener("input", e => { foodFilter = e.target.value; renderQuick(); });
+
   // ---------- workout day toggle ----------
   $("fWorkout").addEventListener("click", async () => {
     const on = !workouts[day];
@@ -1405,6 +1418,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     $("aOil").value = f.cooked ? DEFAULT_OIL_TBSP : 0;
     updatePreview();
     renderQuick();
+    // bring the log panel (and its "Add to day" button) into view so you never have to hunt for it
+    requestAnimationFrame(() => $("adder").scrollIntoView({ block: "center", behavior: "smooth" }));
   }
   function closeAdder() { selected = null; $("adder").hidden = true; renderQuick(); }
 
@@ -1902,7 +1917,10 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const q = $("quick");
     if (tileRenaming && q.querySelector(".tile-rename input") === document.activeElement) return;   // don't redraw mid-rename
     q.innerHTML = "";
-    foods.forEach(f => {
+    const ql = foodFilter.trim().toLowerCase();
+    const list = ql ? foods.filter(f => f.name.toLowerCase().includes(ql)) : foods;
+    const emptyMsg = $("foodsEmpty"); if (emptyMsg) emptyMsg.hidden = list.length > 0;
+    list.forEach(f => {
       const b = document.createElement("button"); b.type = "button"; b.className = "food";
       b.setAttribute("aria-pressed", String(selected === f.id));
       b.textContent = f.name;
@@ -1992,7 +2010,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
       head("Your foods");
       mine.forEach(f => {
         const d = f.def || { amount: 100, unit: "g" }, m = macrosFor(f, d.amount, d.unit, 0);
-        row(f.name, `${r0(m.kcal)} kcal per ${fmtAmt(d.amount, d.unit)}`, () => { clearSearch(); openAdder(f.id); $("adder").scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+        row(f.name, `${r0(m.kcal)} kcal per ${fmtAmt(d.amount, d.unit)}`, () => { clearSearch(); openAdder(f.id); });
       });
     }
     head("USDA food database");
