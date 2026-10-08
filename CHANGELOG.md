@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.10.0 (2026-10-08)
+
+- **Workout days are now the default.** Every day counts as a workout day unless you tap the dumbbell to mark it a **rest** day — the opposite of before. Your existing data is converted automatically: days you'd already marked as workouts stay workouts, and days with food logged that you hadn't marked become rest days, so the "Workout days vs rest days" comparison and the chart dots look the same as before.
+- **Your foods now sort by how often you log them** — the more you log a food, the higher it rises in the "Foods" grid. (The app starts counting from this version; ties keep their previous order.)
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.9.0 (2026-09-30)
 
 - The **Foods** grid is condensed: a **"Filter your foods" box** above it narrows the list as you type, the tiles are smaller (about three per row), and the whole grid sits in a **capped, scrollable area** so it no longer runs on forever.

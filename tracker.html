@@ -584,7 +584,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   // calories per day, published by the food section: { "YYYY-MM-DD": kcal }
   const kcalOf = key => ((window.appShared && window.appShared.kcal) || {})[key];
   // workout days, published by the food section: { "YYYY-MM-DD": true }
-  const isWorkout = key => !!((window.appShared && window.appShared.workouts) || {})[key];
+  // every day is a workout day unless it's in the published rest-day set
+  const isWorkout = key => !((window.appShared && window.appShared.rest) || {})[key];
   const fmtK = v => Math.round(v).toLocaleString();
   const LS_PROFILE = "profile-v1";
   let profile = { heightIn: null, age: null };
@@ -809,13 +810,13 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     // day is shown by colour instead, so you can always tell a workout day from a rest day.
     const r = pts.length > 90 ? 2 : opts.dot;
     const mark = opts.mark || (() => false);
-    const anyMark = pts.some(mark);
+    const anyRest = !!opts.mark && pts.some(p => !mark(p));   // show the solid/open split only once a rest day exists
     const sel = opts.selColor || opts.color;
     const paintDot = (c, on) => {
       if (c.__open) { c.setAttribute("fill", "var(--card)"); c.setAttribute("stroke", on ? sel : opts.color); c.setAttribute("stroke-width", 1.75); }
       else { c.setAttribute("fill", on ? sel : opts.color); c.removeAttribute("stroke"); }
     };
-    const dots = pts.map(p => { const c = el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r }); c.__open = anyMark && !mark(p); return c; });
+    const dots = pts.map(p => { const c = el("circle", { cx: sx(p.x.getTime()), cy: sy(p.y), r }); c.__open = anyRest && !mark(p); return c; });
 
     // hover / tap readout
     const guide = el("line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", opacity: 0 });
@@ -1038,7 +1039,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       action: p => { const s = document.createElement("span"); s.style.display = "contents"; s.append(foodButton(p), deleteButton(p)); return s; },
       aria: ps => `Daily weight, ${ps.length} weigh-ins, latest ${lb(ps[ps.length - 1].y)} lb`
     });
-    $("dailyLegend").hidden = !daily.some(p => isWorkout(p.key));
+    $("dailyLegend").hidden = !daily.some(p => !isWorkout(p.key));
     drawChart($("plot-weekly"), $("ro-weekly"), weekly, {
       color: "var(--weekly)", selColor: "var(--daily)", lineWidth: 2.75, dot: 4.5,
       empty: "Your weekly averages will show up here.",
@@ -1073,7 +1074,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.9.0";   // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.10.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1239,7 +1240,10 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
   let foods = DEFAULT_FOODS.map(f => ({ ...f }));
   let days = {};            // { "YYYY-MM-DD": [items] }
-  let workouts = {};        // { "YYYY-MM-DD": true } for days marked as a workout
+  let rest = {};            // { "YYYY-MM-DD": true } for REST days; every day is a workout day by default
+  let usage = {};           // { foodId: timesLogged } so the most-logged foods sort to the top
+  let legacyWorkouts = null; // old-format workout-day set awaiting one-time conversion to rest days
+  let storeReady = false;   // true once food data is final (db loaded, or local-only), so migration can run
   let day = iso(new Date());
   let db = null, mode = "local";
   let selected = null;      // food id open in the adder
@@ -1248,16 +1252,35 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let lastTap = { id: null, t: 0 }, tileRenaming = null;   // double-tap-to-rename state
   let lastShared = "";      // last calorie map sent to the weight section
 
-  const LS_DAYS = "food-days-v1", LS_FOODS = "food-lib-v1", LS_WORKOUTS = "food-workouts-v1";
+  const LS_DAYS = "food-days-v1", LS_FOODS = "food-lib-v1", LS_WORKOUTS = "food-workouts-v1", LS_USAGE = "food-usage-v1";
   function loadLocal() {
     try { days = JSON.parse(localStorage.getItem(LS_DAYS) || "{}") || {}; } catch { days = {}; }
     try { const f = JSON.parse(localStorage.getItem(LS_FOODS) || "null"); if (Array.isArray(f) && f.length) foods = f.map(normalizeFood); } catch {}
-    try { const w = JSON.parse(localStorage.getItem(LS_WORKOUTS) || "{}"); if (w && typeof w === "object") workouts = w; } catch {}
+    try {
+      const w = JSON.parse(localStorage.getItem(LS_WORKOUTS) || "null");
+      if (w && typeof w === "object") { if (Array.isArray(w.rest)) w.rest.forEach(k => rest[k] = true); else legacyWorkouts = w; }   // old flat { date: true } = workout days
+    } catch {}
+    try { const u = JSON.parse(localStorage.getItem(LS_USAGE) || "null"); if (u && typeof u === "object") usage = u; } catch {}
   }
   function saveLocal() {
-    try { localStorage.setItem(LS_DAYS, JSON.stringify(days)); localStorage.setItem(LS_FOODS, JSON.stringify(foods)); localStorage.setItem(LS_WORKOUTS, JSON.stringify(workouts)); return true; }
-    catch { return false; }
+    try {
+      localStorage.setItem(LS_DAYS, JSON.stringify(days)); localStorage.setItem(LS_FOODS, JSON.stringify(foods));
+      localStorage.setItem(LS_WORKOUTS, JSON.stringify({ rest: Object.keys(rest) })); localStorage.setItem(LS_USAGE, JSON.stringify(usage));
+      return true;
+    } catch { return false; }
   }
+  // Every day is a workout day unless it's explicitly a rest day.
+  function isRestDay(key) { return !!rest[key]; }
+  // One-time: convert old opt-in workout data to the new opt-out model. A past day that had food
+  // logged but was NOT marked a workout becomes a rest day; everything else stays a (default) workout.
+  function maybeMigrateWorkouts() {
+    if (!legacyWorkouts || !storeReady) return;
+    const old = legacyWorkouts; legacyWorkouts = null;
+    rest = {};
+    Object.keys(days).forEach(k => { if ((days[k] || []).length && !old[k]) rest[k] = true; });
+    saveWorkouts();
+  }
+  function bumpUsage(id) { if (!id) return; usage[id] = (usage[id] || 0) + 1; saveUsage(); }
   function setStatus(msg, err) { const s = $("fStatus"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
 
   const food = id => foods.find(f => f.id === id);
@@ -1302,7 +1325,11 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   }
   async function saveWorkouts() {
     if (mode !== "db") return saveLocal();
-    return withRetry(() => db.doc("settings/workouts").set({ dates: Object.keys(workouts) }));
+    return withRetry(() => db.doc("settings/workouts").set({ rest: Object.keys(rest), v: 2 }));
+  }
+  async function saveUsage() {
+    if (mode !== "db") return saveLocal();
+    return withRetry(() => db.doc("settings/usage").set({ counts: usage }));
   }
 
   loadLocal();
@@ -1310,9 +1337,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
   (async () => {
     try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
-    if (!db) return;
+    if (!db) { storeReady = true; maybeMigrateWorkouts(); return; }   // local-only: local data is final now
     mode = "db";
-    const localDays = { ...days }, localFoods = foods;
+    const localDays = { ...days }, localFoods = foods, localRest = { ...rest }, localUsage = { ...usage };
     let firstDays = true, firstFoods = true;
     db.collection("food").onSnapshot(snap => {
       const next = {};
@@ -1322,8 +1349,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
         Object.keys(localDays).forEach(k => { if (!(k in next) && localDays[k].length) { next[k] = localDays[k]; days = next; saveDay(k); } });
         try { localStorage.removeItem(LS_DAYS); } catch {}
       }
-      days = next; render();
-    }, () => { mode = "local"; setStatus("Couldn't reach saved food data. Changes will be kept in this browser for now.", true); });
+      days = next; storeReady = true; maybeMigrateWorkouts(); render();
+    }, () => { mode = "local"; storeReady = true; maybeMigrateWorkouts(); setStatus("Couldn't reach saved food data. Changes will be kept in this browser for now.", true); });
     db.doc("settings/foods").onSnapshot(snap => {
       const v = snap.exists ? snap.data() : null;
       if (v && Array.isArray(v.foods) && v.foods.length) foods = v.foods.map(normalizeFood);
@@ -1331,20 +1358,33 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
       if (firstFoods) { firstFoods = false; try { localStorage.removeItem(LS_FOODS); } catch {} }
       render();
     });
-    const localWorkouts = { ...workouts };
     let firstWork = true;
     db.doc("settings/workouts").onSnapshot(snap => {
       const v = snap.exists ? snap.data() : null;
-      const next = {};
-      if (v && Array.isArray(v.dates)) v.dates.forEach(d => { next[d] = true; });
       if (firstWork) {
         firstWork = false;
-        const hadLocal = Object.keys(localWorkouts).length > 0;
-        Object.keys(localWorkouts).forEach(k => { next[k] = true; });   // keep local-only marks
-        workouts = next;
-        if (hadLocal) saveWorkouts();
+        if (v && Array.isArray(v.rest)) {                 // already the new opt-out format
+          rest = {}; v.rest.forEach(k => rest[k] = true); Object.keys(localRest).forEach(k => rest[k] = true); legacyWorkouts = null;
+        } else if (v && Array.isArray(v.dates)) {         // old opt-in format: convert once food days are in
+          legacyWorkouts = {}; v.dates.forEach(k => legacyWorkouts[k] = true);
+        }
         try { localStorage.removeItem(LS_WORKOUTS); } catch {}
-      } else { workouts = next; }
+        maybeMigrateWorkouts();
+      } else if (v && Array.isArray(v.rest)) { rest = {}; v.rest.forEach(k => rest[k] = true); }
+      render();
+    });
+    let firstUsage = true;
+    db.doc("settings/usage").onSnapshot(snap => {
+      const v = snap.exists ? snap.data() : null;
+      const next = (v && v.counts && typeof v.counts === "object") ? { ...v.counts } : {};
+      if (firstUsage) {
+        firstUsage = false;
+        const hadLocal = Object.keys(localUsage).length > 0;
+        Object.keys(localUsage).forEach(k => { next[k] = Math.max(next[k] || 0, localUsage[k]); });
+        usage = next;
+        if (hadLocal) saveUsage();
+        try { localStorage.removeItem(LS_USAGE); } catch {}
+      } else { usage = next; }
       render();
     });
   })();
@@ -1356,12 +1396,12 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   // ---------- filter your foods ----------
   $("foodFilter").addEventListener("input", e => { foodFilter = e.target.value; renderQuick(); });
 
-  // ---------- workout day toggle ----------
+  // ---------- workout / rest day toggle (every day is a workout day by default) ----------
   $("fWorkout").addEventListener("click", async () => {
-    const on = !workouts[day];
-    if (on) workouts[day] = true; else delete workouts[day];
+    const makeRest = !rest[day];                 // on now -> switch this day to a rest day
+    if (makeRest) rest[day] = true; else delete rest[day];
     render();
-    if (!(await saveWorkouts())) { if (on) delete workouts[day]; else workouts[day] = true; render(); }
+    if (!(await saveWorkouts())) { if (makeRest) delete rest[day]; else rest[day] = true; render(); }
   });
 
   // ---------- open a specific day's food (from pressing and holding a point on the weight chart) ----------
@@ -1546,6 +1586,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     };
     const key = day;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    bumpUsage(r.f.id);   // count how often each food is logged, so the most-used sort to the top
     holdInPlace($("quick"), () => {
       days[key] = [...(days[key] || []), item];
       render(); closeAdder();
@@ -1560,6 +1601,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (!src.length) return;
     const key = day;
     days[key] = src.map(i => ({ ...i, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }));
+    src.forEach(i => { if (i.food) usage[i.food] = (usage[i.food] || 0) + 1; }); saveUsage();
     render();
     if (await saveDay(key)) setStatus(`Copied ${src.length} item${src.length === 1 ? "" : "s"} from the day before.`);
     else { days[key] = []; render(); }
@@ -1918,7 +1960,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (tileRenaming && q.querySelector(".tile-rename input") === document.activeElement) return;   // don't redraw mid-rename
     q.innerHTML = "";
     const ql = foodFilter.trim().toLowerCase();
-    const list = ql ? foods.filter(f => f.name.toLowerCase().includes(ql)) : foods;
+    const base = ql ? foods.filter(f => f.name.toLowerCase().includes(ql)) : foods;
+    const list = [...base].sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0));   // most-logged first; ties keep their order
     const emptyMsg = $("foodsEmpty"); if (emptyMsg) emptyMsg.hidden = list.length > 0;
     list.forEach(f => {
       const b = document.createElement("button"); b.type = "button"; b.className = "food";
@@ -2235,22 +2278,22 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   function publishCalories() {
     const kcal = {};
     Object.keys(days).forEach(k => { const t = (days[k] || []).reduce((a, i) => a + (i.kcal || 0), 0); if (t > 0) kcal[k] = Math.round(t); });
-    const wk = Object.keys(workouts).filter(k => workouts[k]).sort();
-    const sig = JSON.stringify(kcal) + "|" + wk.join(",");
+    const rk = Object.keys(rest).filter(k => rest[k]).sort();
+    const sig = JSON.stringify(kcal) + "|rest:" + rk.join(",");
     if (sig === lastShared) return;
     lastShared = sig;
-    const wkMap = {}; wk.forEach(k => wkMap[k] = true);
-    window.appShared = { ...(window.appShared || {}), kcal, workouts: wkMap };
+    const restMap = {}; rk.forEach(k => restMap[k] = true);
+    window.appShared = { ...(window.appShared || {}), kcal, rest: restMap };
     window.dispatchEvent(new Event("food-updated"));
   }
 
-  // Compare calories eaten on workout days vs rest days (only days with food logged).
+  // Compare calories eaten on workout days vs rest days (only days with food logged; every day is a workout day unless marked rest).
   function renderWorkoutStats() {
     const el = $("wkStats");
     const w = [], r = [];
     Object.keys(days).forEach(k => {
       const t = (days[k] || []).reduce((a, i) => a + (i.kcal || 0), 0);
-      if (t > 0) (workouts[k] ? w : r).push(t);
+      if (t > 0) (isRestDay(k) ? r : w).push(t);
     });
     if (!w.length || !r.length) { el.hidden = true; return; }
     const avg = a => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
@@ -2266,6 +2309,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
   function render() {
     publishCalories();
+    maybeMigrateWorkouts();
     const pageY = window.scrollY;
     const today = iso(new Date());
     const rel = day === today ? "Today" : day === shift(today, -1) ? "Yesterday" : day === shift(today, 1) ? "Tomorrow" : "";
@@ -2303,8 +2347,10 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
       pw.hidden = true;
     }
 
-    // workout day toggle (this day) + the workout-vs-rest comparison
-    $("fWorkout").setAttribute("aria-pressed", workouts[day] ? "true" : "false");
+    // workout day toggle (this day; workout by default) + the workout-vs-rest comparison
+    const workoutDay = !isRestDay(day);
+    $("fWorkout").setAttribute("aria-pressed", workoutDay ? "true" : "false");
+    $("fWorkout").setAttribute("aria-label", workoutDay ? "Workout day. Tap to mark this day as a rest day." : "Rest day. Tap to mark this day as a workout day.");
     renderWorkoutStats();
 
     const list = $("fList"); list.innerHTML = "";
