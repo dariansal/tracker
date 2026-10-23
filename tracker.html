@@ -343,6 +343,28 @@ button.small { min-height: 34px; padding: 0 12px; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .sheet, .sheet-back, .quick button.food { transition: none; } }
 details h3 { font-size: 1rem; margin: 20px 0 0; }
 .note { color: var(--muted); font-size: .88rem; margin: 8px 0 0; }
+/* weekly nutrients tab */
+.nsub { color: var(--muted); font-size: .9rem; margin: -4px 0 6px; text-align: center; }
+.ngroup { margin-top: 18px; }
+.ngroup h3 { font-size: .76rem; letter-spacing: .08em; color: var(--muted); margin: 0 0 2px; font-weight: 700; text-transform: uppercase; }
+.nrow { display: grid; grid-template-columns: 118px 1fr 50px; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 6px 2px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; color: var(--ink); text-align: left; font-weight: 500; font-size: .95rem; }
+.nrow:last-child { border-bottom: 0; }
+.nrow .nbar { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 18%, transparent); overflow: hidden; }
+.nrow .nbar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--weekly); }
+.nrow.full .nbar i { background: var(--daily); }
+.nrow.over .nbar i { background: var(--danger); }
+.nrow .npct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .88rem; }
+.nrow.full .npct { color: var(--daily); }
+.nrow.over .npct { color: var(--danger); }
+.nnote { color: var(--muted); font-size: .82rem; text-align: center; margin: 18px 4px 0; line-height: 1.4; }
+.nsheet { text-align: left; max-height: 82vh; overflow-y: auto; gap: 10px; }
+.nsheet .namt { text-align: center; color: var(--muted); margin: 0; }
+.nsheet .namt strong { color: var(--ink); }
+.nsheet h4 { margin: 6px 0 0; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.nsheet p, .nsheet ul { margin: 0; line-height: 1.45; }
+.nsheet ul { padding-left: 18px; }
+.nsheet li small { display: inline; color: var(--muted); margin: 0; text-align: left; }
 </style>
 </head>
 <body>
@@ -560,6 +582,18 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       <button type="button" id="shDel" class="sheet-btn danger">Delete</button>
     </div>
   </div>
+
+  <div id="pane-nutr" role="tabpanel" aria-labelledby="tab-nutr" hidden>
+    <div class="daybar">
+      <button type="button" id="nPrev" aria-label="Previous week">‹</button>
+      <div class="d" id="nWeek"></div>
+      <button type="button" id="nNext" aria-label="Next week">›</button>
+    </div>
+    <p class="nsub" id="nSub"></p>
+    <p class="status" id="nStatus" role="status"></p>
+    <div id="nList"></div>
+    <p class="nnote">Weekly targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Values come from the USDA database where possible, otherwise Claude's estimates. Tap any nutrient to learn more.</p>
+  </div>
 </main>
 <nav class="tabs no-anim" role="tablist" aria-label="Sections">
   <span class="tab-pill" aria-hidden="true"></span>
@@ -571,7 +605,17 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v7a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2V2"/><path d="M7.5 2v20"/><path d="M20 15V2a4.5 4.5 0 0 0-4.5 4.5V13a2 2 0 0 0 2 2H20Zm0 0v7"/></svg>
     <span>Food</span>
   </button>
+  <button type="button" role="tab" id="tab-nutr" aria-controls="pane-nutr" aria-selected="false">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12"/></svg>
+    <span>Nutrients</span>
+  </button>
 </nav>
+<div class="sheet-back" id="nBack" hidden></div>
+<div class="sheet nsheet" id="nSheet" role="dialog" aria-modal="true" aria-labelledby="nTitle" hidden>
+  <b id="nTitle"></b>
+  <div id="nBody"></div>
+  <button type="button" id="nDone" class="sheet-btn">Done</button>
+</div>
 <div class="sheet-back" id="setBack" hidden></div>
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
   <b id="setTitle">Settings</b>
@@ -1085,7 +1129,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.11.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.12.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1143,8 +1187,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
 // ================= tabs =================
 (() => {
-  const tabs = { weight: document.getElementById("tab-weight"), food: document.getElementById("tab-food") };
-  const panes = { weight: document.getElementById("pane-weight"), food: document.getElementById("pane-food") };
+  const tabs = { weight: document.getElementById("tab-weight"), food: document.getElementById("tab-food"), nutr: document.getElementById("tab-nutr") };
+  const panes = { weight: document.getElementById("pane-weight"), food: document.getElementById("pane-food"), nutr: document.getElementById("pane-nutr") };
   const bar = document.querySelector(".tabs"), pill = document.querySelector(".tab-pill");
   let current = "weight";
   function placePill() {
@@ -1162,12 +1206,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     try { localStorage.setItem("log-tab", name); } catch {}
     // charts measure their width, so redraw once the pane is visible
     window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new CustomEvent("tab-shown", { detail: { name } }));
   }
   tabs.weight.addEventListener("click", () => show("weight"));
   tabs.food.addEventListener("click", () => show("food"));
+  tabs.nutr.addEventListener("click", () => show("nutr"));
   let start = "weight";
   try { start = localStorage.getItem("log-tab") || "weight"; } catch {}
-  show(start === "food" ? "food" : "weight");
+  show(tabs[start] ? start : "weight");
   // place the pill without animating, then enable the glide for later switches
   requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("no-anim")));
   window.addEventListener("resize", placePill);
@@ -1208,21 +1254,49 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   // When you enter a food by cups, tablespoons or "whole", the calories you type are for that serving,
   // so no weight is needed. These stand-ins only matter if you later log it in grams/ounces/pounds.
   const DEFAULT_CUP_G = 240, DEFAULT_EACH_G = 100;
+  // ---------- micronutrients ----------
+  // Order matches the 8th column of the USDA asset and food.micro (values per 100 g of food).
+  // daily = adult men's RDA/AI; sodium is an upper limit. Weekly target = daily x days logged.
+  const NUTR = [
+    { k: "a", name: "Vitamin A", u: "mcg", daily: 900, g: "vit", why: "Keeps your eyes working well in low light, and supports skin and your immune system.", src: "Sweet potato, carrots, spinach and kale, eggs, liver" },
+    { k: "c", name: "Vitamin C", u: "mg", daily: 90, g: "vit", why: "Builds collagen for skin, tendons and joints, helps wounds heal, and helps you absorb iron from plants.", src: "Bell peppers, citrus, kiwi, strawberries, broccoli" },
+    { k: "d", name: "Vitamin D", u: "mcg", daily: 15, g: "vit", why: "Lets your body use calcium for strong bones, and supports muscles and immunity. Hard to get from food alone; sunlight makes most of it.", src: "Salmon and other fatty fish, eggs, fortified milk, mushrooms exposed to sun" },
+    { k: "e", name: "Vitamin E", u: "mg", daily: 15, g: "vit", why: "An antioxidant that protects your cells, and supports immune function.", src: "Almonds, sunflower seeds, peanut butter, olive oil, spinach" },
+    { k: "k", name: "Vitamin K", u: "mcg", daily: 120, g: "vit", why: "Needed for normal blood clotting and for building bone.", src: "Kale, spinach, broccoli, Brussels sprouts, olive oil" },
+    { k: "b1", name: "Thiamin B1", u: "mg", daily: 1.2, g: "vit", why: "Helps turn carbohydrates into energy and keeps nerves working.", src: "Pork, whole grains, enriched rice and bread, beans" },
+    { k: "b2", name: "Riboflavin B2", u: "mg", daily: 1.3, g: "vit", why: "Helps release energy from food and keeps skin and eyes healthy.", src: "Milk and yogurt, eggs, lean meat, mushrooms, almonds" },
+    { k: "b3", name: "Niacin B3", u: "mg", daily: 16, g: "vit", why: "Helps turn food into energy and supports skin and digestion.", src: "Chicken, tuna, peanuts and peanut butter, beef, brown rice" },
+    { k: "b6", name: "Vitamin B6", u: "mg", daily: 1.3, g: "vit", why: "Helps your body use protein, make red blood cells and brain chemicals.", src: "Chicken, potatoes, bananas, chickpeas, salmon" },
+    { k: "fol", name: "Folate", u: "mcg", daily: 400, g: "vit", why: "Needed to make new cells and DNA, including red blood cells.", src: "Lentils and beans, leafy greens, asparagus, enriched rice and bread" },
+    { k: "b12", name: "Vitamin B12", u: "mcg", daily: 2.4, g: "vit", why: "Keeps nerves and red blood cells healthy. Found almost only in animal foods.", src: "Beef, fish, shellfish, eggs, milk and yogurt" },
+    { k: "ca", name: "Calcium", u: "mg", daily: 1000, g: "min", why: "Builds and maintains bones and teeth, and helps muscles contract.", src: "Milk, yogurt, cheese, tofu made with calcium, sardines, leafy greens" },
+    { k: "fe", name: "Iron", u: "mg", daily: 8, g: "min", why: "Carries oxygen in your blood; low iron makes you tired.", src: "Red meat, lentils and beans, spinach, fortified cereal, shellfish" },
+    { k: "mg", name: "Magnesium", u: "mg", daily: 420, g: "min", why: "Involved in muscle and nerve function, sleep, energy and blood sugar control. Many people fall short.", src: "Pumpkin seeds, almonds, spinach, black beans, peanut butter, dark chocolate" },
+    { k: "kp", name: "Potassium", u: "mg", daily: 3400, g: "min", why: "Balances fluids, keeps your heartbeat steady and helps offset sodium's effect on blood pressure.", src: "Potatoes, beans, bananas, yogurt, spinach, avocado" },
+    { k: "zn", name: "Zinc", u: "mg", daily: 11, g: "min", why: "Supports immunity, wound healing, testosterone and your sense of taste.", src: "Beef, shellfish, pumpkin seeds, chickpeas, cashews" },
+    { k: "se", name: "Selenium", u: "mcg", daily: 55, g: "min", why: "An antioxidant mineral that supports your thyroid and immune system.", src: "Brazil nuts (one or two is plenty), tuna, shrimp, eggs, chicken" },
+    { k: "ph", name: "Phosphorus", u: "mg", daily: 700, g: "min", why: "Works with calcium to build bones, and helps your body store energy.", src: "Meat, fish, dairy, beans, nuts" },
+    { k: "fib", name: "Fiber", u: "g", daily: 38, g: "oth", why: "Keeps digestion regular, helps you feel full, and supports healthy cholesterol and blood sugar.", src: "Beans and lentils, oats, berries, vegetables, whole grains" },
+    { k: "na", name: "Sodium", u: "mg", daily: 2300, g: "oth", limit: true, why: "Needed for fluid balance and nerves, but most people get too much, which can raise blood pressure. This one is a limit to stay under, not a target.", src: "Mostly salt: packaged and restaurant food, sauces, deli meats, cheese, bread" },
+  ];
+  const NGROUPS = [["vit", "Vitamins"], ["min", "Minerals"], ["oth", "Other"]];
+
   const DEFAULT_OIL_TBSP = 1;
-  const mk = (id, name, detail, per100, gPerCup, def, cooked) => ({
+  const mk = (id, name, detail, per100, gPerCup, def, cooked, micro) => ({
     id, name, detail, base: "g",
     units: unitsWith(gPerCup),
     per: { kcal: per100[0] / 100, p: per100[1] / 100, c: per100[2] / 100, f: per100[3] / 100 },
-    def, ...(cooked ? { cooked: true } : {}),
+    def, ...(cooked ? { cooked: true } : {}), ...(micro ? { micro, microSrc: "usda" } : {}),
   });
   const DEFAULT_FOODS = [
-    mk("banana", "Banana", "", [89, 1.1, 22.9, 0.3], 150, { amount: 118, unit: "g" }),
-    mk("beef", "85/15 ground beef", "", [215, 18.7, 0, 15.2], 225, { amount: 8, unit: "oz" }, true),
-    mk("rice", "White rice", "", [130, 2.7, 28.2, 0.3], 158, { amount: 1, unit: "cup" }),
-    mk("chicken", "Chicken thighs", "", [120, 19.8, 0, 4.2], 140, { amount: 1.5, unit: "lb" }, true),
-    mk("shrimp", "Shrimp", "", [85, 20.1, 0, 0.4], 145, { amount: 8, unit: "oz" }, true),
+    // micronutrients from USDA SR28 (same order as NUTR, per 100 g)
+    mk("banana", "Banana", "", [89, 1.1, 22.9, 0.3], 150, { amount: 118, unit: "g" }, false, [3, 8.7, 0, 0.1, 0.5, 0.031, 0.073, 0.665, 0.367, 20, 0, 5, 0.26, 27, 358, 0.15, 1, 22, 2.6, 1]),
+    mk("beef", "85/15 ground beef", "", [215, 18.7, 0, 15.2], 225, { amount: 8, unit: "oz" }, true, [4, 0, 0.1, 0.17, 1.3, 0.042, 0.151, 4.65, 0.346, 6, 2.17, 15, 2.09, 18, 295, 4.48, 15.8, 171, 0, 66]),
+    mk("rice", "White rice", "", [130, 2.7, 28.2, 0.3], 158, { amount: 1, unit: "cup" }, false, [0, 0, 0, 0.04, 0, 0.163, 0.013, 1.48, 0.093, 97, 0, 10, 1.2, 12, 35, 0.49, 7.5, 43, 0.4, 1]),
+    mk("chicken", "Chicken thighs", "", [120, 19.8, 0, 4.2], 140, { amount: 1.5, unit: "lb" }, true, [7, 0, 0, 0.18, 2.9, 0.088, 0.196, 5.56, 0.451, 4, 0.61, 7, 0.81, 23, 242, 1.58, 22.9, 185, 0, 95]),
+    mk("shrimp", "Shrimp", "", [85, 20.1, 0, 0.4], 145, { amount: 8, unit: "oz" }, true, [54, 0, 0.1, 1.32, 0.3, 0.02, 0.015, 1.78, 0.161, 19, 1.11, 64, 0.52, 35, 264, 1.34, 29.6, 214, 0, 119]),
     mk("salsa", "Homemade salsa", "", [27, 1, 5.7, 0.2], 240, { amount: 1.25, unit: "cup" }),
-    mk("oil", "Olive oil", "", [884, 0, 0, 100], 216, { amount: 1, unit: "tbsp" }),
+    mk("oil", "Olive oil", "", [884, 0, 0, 100], 216, { amount: 1, unit: "tbsp" }, false, [0, 0, 0, 14.3, 60.2, 0, 0, 0, 0, 0, 0, 1, 0.56, 0, 1, 0, 0, 0, 0, 2]),
   ];
 
   // Bring foods saved in the older format (units like "banana", "scoop", "8 oz") into the weight format.
@@ -1267,6 +1341,11 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let selected = null;      // food id open in the adder
   let entryDraft = null;    // { id, amount, unit, oil } while editing a logged entry's portion
   let foodFilter = "";      // text typed in the "Filter your foods" box
+  let foodsReady = false;   // true once your saved food list has loaded (never write foods before this)
+  let npMicro = null;       // USDA micronutrients for the food being created from a search pick
+  let microBusy = false, microTimer = null;
+  let nWeek = null;         // Monday (YYYY-MM-DD) of the week shown on the Nutrients tab
+  let shownStats = null;    // totals for that week, used by the detail sheet
   let lastTap = { id: null, t: 0 }, tileRenaming = null;   // double-tap-to-rename state
   let lastShared = "";      // last calorie map sent to the weight section
 
@@ -1355,7 +1434,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
   (async () => {
     try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
-    if (!db) { storeReady = true; maybeMigrateWorkouts(); return; }   // local-only: local data is final now
+    if (!db) { storeReady = true; foodsReady = true; maybeMigrateWorkouts(); scheduleMicros(); return; }   // local-only: local data is final now
     mode = "db";
     const localDays = { ...days }, localFoods = foods, localRest = { ...rest }, localUsage = { ...usage };
     let firstDays = true, firstFoods = true;
@@ -1368,12 +1447,12 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
         try { localStorage.removeItem(LS_DAYS); } catch {}
       }
       days = next; storeReady = true; maybeMigrateWorkouts(); render();
-    }, () => { mode = "local"; storeReady = true; maybeMigrateWorkouts(); setStatus("Couldn't reach saved food data. Changes will be kept in this browser for now.", true); });
+    }, () => { mode = "local"; storeReady = true; foodsReady = true; maybeMigrateWorkouts(); setStatus("Couldn't reach saved food data. Changes will be kept in this browser for now.", true); });
     db.doc("settings/foods").onSnapshot(snap => {
       const v = snap.exists ? snap.data() : null;
       if (v && Array.isArray(v.foods) && v.foods.length) foods = v.foods.map(normalizeFood);
       else if (firstFoods && localFoods !== foods) {/* keep */}
-      if (firstFoods) { firstFoods = false; try { localStorage.removeItem(LS_FOODS); } catch {} }
+      if (firstFoods) { firstFoods = false; foodsReady = true; try { localStorage.removeItem(LS_FOODS); } catch {} }
       render();
     });
     let firstWork = true;
@@ -1757,6 +1836,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   $("nName").addEventListener("input", () => { if ($("nName").value) $("nNameHint").hidden = true; });
   function openNewFood() {
     nameSuggestion = ""; $("nName").placeholder = "Name this food"; $("nNameHint").hidden = true;
+    npMicro = null;
     closeAdder(); $("editPanel").hidden = true; editing = null;
     NF.forEach(id => $(id).value = "");
     unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
@@ -1765,7 +1845,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     setStatus(""); npClearError();
     $("newPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
-  function closeNewFood() { $("newPanel").hidden = true; npClearError(); }
+  function closeNewFood() { $("newPanel").hidden = true; npClearError(); npMicro = null; }
   function npClearError() { const e = $("npErr"); e.hidden = true; e.textContent = ""; }
   function npError(msg, focusId) {
     const e = $("npErr"); e.textContent = msg; e.hidden = false;
@@ -1911,7 +1991,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const f = { id: "c" + Date.now().toString(36), name, detail: "", base: "g",
       units: unitsWith(cupG, eachG),
       per: { kcal: nums[0] / grams, p: nums[1] / grams, c: nums[2] / grams, f: nums[3] / grams },
-      def: { amount: amt, unit }, custom: true };
+      def: { amount: amt, unit }, custom: true, ...(npMicro ? { micro: npMicro, microSrc: "usda" } : {}) };
     // show it right away and save in the background
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const sub = $("npSub").textContent;
@@ -2009,7 +2089,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (usda) return Promise.resolve(usda);
     if (!usdaLoading) {
       usdaLoading = (window.__USDA ? Promise.resolve() : loadScript(USDA_URL)).then(() => {
-        usda = (window.__USDA || []).map(r => ({ name: r[0], per100: r.slice(1, 5), cup: r[5], each: r[6], key: norm(r[0]), first: norm(r[0].split(",")[0]),
+        usda = (window.__USDA || []).map(r => ({ name: r[0], per100: r.slice(1, 5), cup: r[5], each: r[6], micro: Array.isArray(r[7]) ? r[7] : null, key: norm(r[0]), first: norm(r[0].split(",")[0]),
           brands: (r[0].match(/\b[A-Z]{3,}\b/g) || []).map(w => w.toLowerCase()) }));
         usda.forEach(r => { if (!r.brands.length) r.brands = null; });
         return usda;
@@ -2085,7 +2165,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
       hits.forEach(r => {
         const sv = usdaServing(r);
         row(r.name, `${r0(sv.kcal)} kcal, ${r0(sv.protein)} g protein per ${fmtAmt(sv.servingAmount, sv.servingUnit)}`, () => {
-          clearSearch(); openNewFood();
+          clearSearch(); openNewFood(); npMicro = r.micro;
           fillFromLabel(sv, "From the USDA database. Check the numbers and name, then save.", true);
         });
       });
@@ -2402,7 +2482,156 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     $("fCopy").hidden = items.length > 0 || !(days[shift(day, -1)] || []).length;
 
     renderQuick();
+    renderNutrients();
+    scheduleMicros();
     if (window.scrollY !== pageY) window.scrollTo(0, pageY);
+  }
+
+  // ---------- weekly micronutrients ----------
+  function mondayKey(d) { const x = new Date(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return iso(x); }
+  function itemGrams(it, f) {
+    const u = f.units && f.units[it.unit];
+    if (u > 0) return it.amount * u;
+    const o = oilFood().per.kcal * OIL_G_PER_TBSP * (it.oil || 0);
+    return f.per && f.per.kcal > 0 ? Math.max(0, (it.kcal || 0) - o) / f.per.kcal : 0;
+  }
+  function weekStats(start) {
+    const tot = NUTR.map(() => 0), by = NUTR.map(() => ({}));
+    let logged = 0, unknown = 0;
+    const add = (micro, grams, label) => micro.forEach((v, j) => {
+      if (v > 0 && grams > 0) { const a = v * grams / 100; tot[j] += a; by[j][label] = (by[j][label] || 0) + a; }
+    });
+    for (let i = 0; i < 7; i++) {
+      const items = days[shift(start, i)] || [];
+      if (items.length) logged++;
+      items.forEach(it => {
+        const f = food(it.food);
+        if (f && Array.isArray(f.micro)) add(f.micro, itemGrams(it, f), f.name); else unknown++;
+        if (it.oil > 0) { const o = oilFood(); if (Array.isArray(o.micro)) add(o.micro, it.oil * OIL_G_PER_TBSP, o.name); }
+      });
+    }
+    return { tot, by, logged, unknown };
+  }
+  function fmtN(v) { return v >= 100 ? Math.round(v).toLocaleString() : v >= 10 ? (+v.toFixed(1)).toLocaleString() : (+v.toFixed(2)).toLocaleString(); }
+  function shortDate(k) { return parse(k).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+  function renderNutrients() {
+    const list = $("nList"); if (!list) return;
+    const thisWeek = mondayKey(new Date());
+    if (!nWeek || nWeek > thisWeek) nWeek = thisWeek;
+    const end = shift(nWeek, 6);
+    const label = parse(end).getMonth() === parse(nWeek).getMonth() ? `${shortDate(nWeek)} – ${parse(end).getDate()}` : `${shortDate(nWeek)} – ${shortDate(end)}`;
+    const wk = document.createElement("span"); wk.style.textAlign = "center"; wk.append(document.createTextNode(label));
+    const rel = nWeek === thisWeek ? "This week" : nWeek === shift(thisWeek, -7) ? "Last week" : "";
+    if (rel) { const sm = document.createElement("small"); sm.textContent = rel; wk.appendChild(sm); }
+    $("nWeek").innerHTML = ""; $("nWeek").appendChild(wk);
+    $("nNext").disabled = nWeek >= thisWeek;
+    const st = shownStats = weekStats(nWeek), n = Math.max(1, st.logged);
+    $("nSub").textContent = !st.logged ? "No food logged this week."
+      : `${st.logged} of 7 days logged, so targets cover ${st.logged} day${st.logged === 1 ? "" : "s"}` + (st.unknown ? ` · ${st.unknown} item${st.unknown === 1 ? "" : "s"} still being estimated` : "");
+    list.innerHTML = "";
+    if (!st.logged) return;
+    NGROUPS.forEach(([g, title]) => {
+      const sec = document.createElement("div"); sec.className = "ngroup";
+      const h = document.createElement("h3"); h.textContent = title; sec.appendChild(h);
+      NUTR.forEach((nu, j) => {
+        if (nu.g !== g) return;
+        const pct = st.tot[j] / (nu.daily * n) * 100;
+        const b = document.createElement("button"); b.type = "button";
+        b.className = "nrow" + (nu.limit ? (pct > 100 ? " over" : "") : (pct >= 100 ? " full" : ""));
+        const nm = document.createElement("span"); nm.textContent = nu.name;
+        const bar = document.createElement("span"); bar.className = "nbar"; const fill = document.createElement("i"); fill.style.width = Math.min(100, pct) + "%"; bar.appendChild(fill);
+        const pc = document.createElement("span"); pc.className = "npct"; pc.textContent = Math.round(pct) + "%" + (!nu.limit && pct >= 100 ? " ✓" : "");
+        b.append(nm, bar, pc);
+        b.setAttribute("aria-label", `${nu.name}: ${Math.round(pct)} percent of ${nu.limit ? "the weekly limit" : "the weekly target"}. Tap for details.`);
+        b.addEventListener("click", () => openNutr(j));
+        sec.appendChild(b);
+      });
+      list.appendChild(sec);
+    });
+  }
+  function openNutr(j) {
+    const nu = NUTR[j], st = shownStats; if (!st) return;
+    const n = Math.max(1, st.logged), target = nu.daily * n, pct = Math.round(st.tot[j] / target * 100);
+    $("nTitle").textContent = nu.name;
+    const body = $("nBody"); body.innerHTML = "";
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const amt = el("p", "namt"); const strong = el("strong", "", `${fmtN(st.tot[j])} ${nu.u}`);
+    amt.append(strong, document.createTextNode(` of ${fmtN(target)} ${nu.u} ${nu.limit ? "limit" : "target"} for ${n} day${n === 1 ? "" : "s"} (${pct}%)`));
+    body.append(amt, el("h4", "", "What it does"), el("p", "", nu.why), el("h4", "", "Good sources"), el("p", "", nu.src), el("h4", "", "Your top sources this week"));
+    const top = Object.entries(st.by[j]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    if (!top.length) body.appendChild(el("p", "", "Nothing you logged this week had much of it."));
+    else { const ul = el("ul"); top.forEach(([name, v]) => { const li = el("li", "", name + " "); li.appendChild(el("small", "", `${fmtN(v)} ${nu.u}`)); ul.appendChild(li); }); body.appendChild(ul); }
+    $("nBack").hidden = false; $("nSheet").hidden = false;
+    requestAnimationFrame(() => { $("nBack").classList.add("show"); $("nSheet").classList.add("show"); });
+  }
+  function closeNutr() {
+    $("nBack").classList.remove("show"); $("nSheet").classList.remove("show");
+    setTimeout(() => { $("nBack").hidden = true; $("nSheet").hidden = true; }, 260);
+  }
+  $("nDone").addEventListener("click", closeNutr);
+  $("nBack").addEventListener("click", closeNutr);
+  $("nPrev").addEventListener("click", () => { nWeek = shift(nWeek, -7); renderNutrients(); });
+  $("nNext").addEventListener("click", () => { const tw = mondayKey(new Date()); if (nWeek < tw) { nWeek = shift(nWeek, 7); renderNutrients(); } });
+  window.addEventListener("tab-shown", e => { if (e.detail && e.detail.name === "nutr") { renderNutrients(); scheduleMicros(); } });
+
+  // Fill in micronutrients for foods that don't have them yet: starter foods and exact USDA
+  // name matches first, then Claude estimates the rest a few at a time. Runs once per food.
+  function scheduleMicros() { clearTimeout(microTimer); microTimer = setTimeout(ensureMicros, 400); }
+  function setNStatus(msg, err) { const s = $("nStatus"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
+  function applyMicros(res) {
+    if (!Object.keys(res).length) return false;
+    foods = foods.map(f => res[f.id] ? { ...f, ...res[f.id] } : f);
+    return true;
+  }
+  async function ensureMicros() {
+    if (microBusy || !storeReady || !foodsReady) return;
+    if (!foods.some(f => !Array.isArray(f.micro) && !f.microSrc)) return;
+    microBusy = true;
+    try {
+      const res = {};
+      foods.forEach(f => { if (Array.isArray(f.micro) || f.microSrc) return; const d = DEFAULT_FOODS.find(x => x.id === f.id); if (d && d.micro) res[f.id] = { micro: d.micro, microSrc: "usda" }; });
+      let rest = foods.filter(f => !Array.isArray(f.micro) && !f.microSrc && !res[f.id]);
+      if (rest.length) {
+        try { await loadUsda(); } catch {}
+        if (usda) {
+          const byName = new Map(usda.map(r => [r.name.toLowerCase(), r]));
+          rest.forEach(f => { const r = byName.get(f.name.trim().toLowerCase()); if (r && r.micro) res[f.id] = { micro: r.micro, microSrc: "usda" }; });
+          rest = rest.filter(f => !res[f.id]);
+        }
+      }
+      if (applyMicros(res)) { await saveFoods(); renderNutrients(); }
+      await scanReady;
+      if (!sampler || !rest.length) return;
+      const keys = NUTR.map(n => n.k);
+      for (let i = 0; i < rest.length; i += 8) {
+        const batch = rest.slice(i, i + 8);
+        setNStatus(`Estimating nutrients for ${rest.length - i} food${rest.length - i === 1 ? "" : "s"}...`);
+        let r;
+        try {
+          r = await sampler.json([
+            "For each food below, estimate its micronutrients PER 100 GRAMS of the food as described (typical USDA-style values; for a branded or homemade item, typical values for that kind of food). Its kcal, protein, carbs and fat per 100 g are given to help identify it.",
+            `Return ONLY a JSON object, no other text: {"items": [{"i": 0, ${keys.map(k => `"${k}": number`).join(", ")}}, ...]} with one object per food, where i is the food's number.`,
+            "Units: a = vitamin A (mcg RAE), c = vitamin C (mg), d = vitamin D (mcg), e = vitamin E (mg alpha-tocopherol), k = vitamin K (mcg), b1 = thiamin (mg), b2 = riboflavin (mg), b3 = niacin (mg), b6 = vitamin B6 (mg), fol = folate (mcg DFE), b12 = vitamin B12 (mcg), ca = calcium (mg), fe = iron (mg), mg = magnesium (mg), kp = potassium (mg), zn = zinc (mg), se = selenium (mcg), ph = phosphorus (mg), fib = fiber (g), na = sodium (mg).",
+            "If you can't tell what a food is, return {\"i\": n, \"unknown\": true} for it.",
+            "Foods:",
+            ...batch.map((f, j) => `${j}. ${f.name}: ${r0(f.per.kcal * 100)} kcal, ${+(f.per.p * 100).toFixed(1)} g protein, ${+(f.per.c * 100).toFixed(1)} g carbs, ${+(f.per.f * 100).toFixed(1)} g fat per 100 g`),
+          ].join("\n"), { modelTier: "default" });
+        } catch (e) {
+          setNStatus(e && e.code === "rate_limited" ? "Paused estimating nutrients (too many requests). It'll pick up again later." : "Couldn't reach Claude to estimate some foods' nutrients. It'll try again next time.", true);
+          return;
+        }
+        const items = r && Array.isArray(r.items) ? r.items : [];
+        const out = {};
+        batch.forEach((f, j) => {
+          const it = items.find(x => x && +x.i === j);
+          if (!it || it.unknown) { out[f.id] = { microSrc: "unknown" }; return; }
+          const micro = NUTR.map(nu => { const v = parseFloat(it[nu.k]); return isFinite(v) && v >= 0 && v < nu.daily * 50 ? +v.toPrecision(3) : null; });
+          out[f.id] = { micro, microSrc: "claude" };
+        });
+        applyMicros(out); await saveFoods(); renderNutrients();
+      }
+      setNStatus("");
+    } finally { microBusy = false; }
   }
 })();
 </script>

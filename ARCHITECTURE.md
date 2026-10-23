@@ -36,7 +36,7 @@ Search for these markers; line numbers drift.
 | Version | `// ===== version` | `APP_VERSION`, shown at the bottom of Settings. |
 | Preferences | `// ===== preferences` | `window.appPrefs` (`proteinLow`, `proteinHigh`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
 | Settings panel | `// ===== settings panel` | Gear button, bottom sheet, appearance (sun/moon) toggle. |
-| Tabs | `// ===== tabs` | Bottom Weight/Food bar with a gliding highlight; remembers the last tab (localStorage `log-tab`); hides while typing. |
+| Tabs | `// ===== tabs` | Bottom Weight/Food/Nutrients bar (fires `tab-shown`) with a gliding highlight; remembers the last tab (localStorage `log-tab`); hides while typing. |
 | Food module | `// ===== food` | IIFE containing everything below. |
 | ↳ storage | `// ---------- storage` | Load and save days and foods; db with localStorage fallback. |
 | ↳ log panel | `// ---------- adder` | Panel shown when a food is tapped: amount, unit, cooking oil, pencil rename, Add to day. |
@@ -59,6 +59,7 @@ Stored in the artifact `db` (see `SETUP-FOR-CLAUDE.md` for the exact document la
 - `normalizeFood()` converts older formats (per-unit macros, units like "banana" or "scoop") into this shape on load. Keep it working.
 - **Profile:** `settings/profile` → `{ heightIn, age }`. **Preferences:** `settings/prefs` → `{ proteinLow, proteinHigh }` (protein goal range, g per lb; defaults 0.9 and 1.1).
 - **Rest days:** `settings/workouts` → `{ rest: ["YYYY-MM-DD", ...], v: 2 }`. **Every day is a workout day by default**; this set holds only the days explicitly marked as *rest* days. Kept separate from the food log so it never affects logged items or weigh-ins. Old installs stored `{ dates: [...] }` (opt-in *workout* days); on load, `maybeMigrateWorkouts()` converts once food days are available — food-logged days not in the old workout set become rest days — preserving the "Workout days vs rest days" comparison, then rewrites the doc in the new shape.
+- **Micronutrients:** a food may carry `micro` — 20 numbers per 100 g in `NUTR` order (A mcg RAE, C mg, D mcg, E mg, K mcg, B1, B2, B3, B6 mg, folate mcg DFE, B12 mcg, Ca, Fe, Mg, K mg, Zn mg, Se mcg, P mg, fiber g, Na mg) — and `microSrc` (`"usda"`, `"claude"`, or `"unknown"` when Claude couldn't identify it). Sources, in order: starter foods (built in), USDA search picks (copied from the asset's 8th column), exact USDA name match, then Claude via `sample.json` in batches of 8. `ensureMicros()` runs after load and never before `foodsReady` (the saved food list has loaded), so it can't overwrite foods; a failed Claude call leaves foods unmarked to retry later. Weekly totals are computed live in `weekStats()` from each logged item's food and grams (plus cooking oil), so editing or deleting a food changes past weeks' micronutrients.
 - **Food usage:** `settings/usage` → `{ counts: { <foodId>: timesLogged } }`. Incremented each time a food is logged (adder or copy-day); the Foods grid sorts by it, most-logged first.
 - **localStorage keys:** `weight-log-v1`, `food-days-v1`, `food-lib-v1`, `food-workouts-v1` (now `{ rest: [...] }`), `food-usage-v1`, `profile-v1`, `prefs-v1` (fallbacks, moved into the db when it connects), plus `log-tab`.
 
@@ -91,6 +92,8 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 2. Otherwise (the owner's phone), Tesseract reads the text **on the phone**: the image is scaled to 2000 px and made grayscale with more contrast. The engine loads from the asset (falling back to jsDelivr), and the English data from its asset, decompressed with `DecompressionStream`.
 3. The text goes to `sample.json` to be turned into numbers. If that fails, `parseLabel()` handles common OCR errors ("g" read as "9", "O" read as "0"), picking the reading whose protein, carbs, and fat best match the printed calories.
 4. The serving is converted to the standard units: countable servings like "1 scoop (46g)" become **whole**; cups and tablespoons are kept, with grams per cup worked out; everything else becomes grams. The suggested name appears as gray placeholder text, and **space accepts it**.
+
+**Nutrients tab:** grouped bars (Vitamins / Minerals / Other) for a Monday–Sunday week, ‹ › to browse back. Weekly target = adult male RDA/AI × days with food logged (sodium is a limit; over 100% turns red). Tapping a row opens a sheet with what it does, good sources (static text in `NUTR`), and your top sources that week.
 
 **Settings (gear):** the **Protein goal** range inputs (saved to the account) and the version number.
 

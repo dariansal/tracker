@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.12.0 (2026-10-22)
+
+- New **Nutrients** tab (third tab in the bottom bar): weekly totals for 20 micronutrients, grouped into Vitamins (A, C, D, E, K, B1, B2, B3, B6, folate, B12), Minerals (calcium, iron, magnesium, potassium, zinc, selenium, phosphorus) and Other (fiber, and sodium as a limit). Weeks run Monday–Sunday with ‹ › to look back. Targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Tap a nutrient for what it does, foods rich in it, and your top sources that week.
+- Where the numbers come from: the built-in food database now includes USDA's measured micronutrients, so foods picked from search (and the starter foods) get real values. Foods you scanned, typed in, or got from "Ask Claude" are estimated by Claude once and saved. The first time you open this version, the app fills in every food you've already logged, so past weeks show up too.
+
+Assets changed: **usda-foods.js** (now includes 20 micronutrients per food; re-upload it). ocr-core.js and ocr-eng-data.js unchanged.
+New capabilities: none (uses the existing `sample`).
+
 ## 1.11.0 (2026-10-22)
 
 - The **Weight / Food tabs are now a bar along the bottom of the screen**, with an icon and label for each, like a regular iPhone app. The title and the gear stay at the top. The bar tucks away while you're typing so it doesn't sit on top of the keyboard.

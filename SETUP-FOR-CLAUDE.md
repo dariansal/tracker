@@ -9,7 +9,7 @@ These instructions are for Claude. They cover three jobs: **installing** the tra
 | `tracker.html` | The whole app. Contains three placeholders that must be replaced with the installed file links (see below). Its version is `APP_VERSION` in the file. |
 | `assets/ocr-core.js` | Tesseract.js core 5.1.1 (`tesseract-core-lstm.wasm.js`), the label-reading engine. |
 | `assets/ocr-eng-data.js` | English OCR data (`eng.traineddata`, best_int), gzipped and base64-encoded as `window.__OCR_ENG_GZ`. |
-| `assets/usda-foods.js` | USDA SR28 (~8,800 foods) as `window.__USDA`, used by the food search. |
+| `assets/usda-foods.js` | USDA SR28 (~8,800 foods) as `window.__USDA`, used by the food search: per food `[name, kcal, protein, carbs, fat, gramsPerCup, gramsPerWhole, [20 micronutrients per 100 g]]`. |
 | `assets/SHA256SUMS` | Checksums of the three asset files. They change only when an asset changes. |
 | `tracker-icon.png` | Optional home screen icon. |
 | `tools/make_release.py` | Turns an installed copy back into the clean `tracker.html` (used for releases). |
