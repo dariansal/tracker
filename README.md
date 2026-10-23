@@ -16,7 +16,7 @@ Everything lives in **one HTML file** (`tracker.html`). Claude installs it on yo
 - **Units:** grams, ounces, pounds, cups, tablespoons, and "whole" for things like eggs or scoops.
 - **Quick editing:** tap a food to log it, double-tap to rename it, and press and hold to edit or delete it.
 - **Weekly micronutrients:** 20 vitamins and minerals totaled per week against recommended targets, from USDA data or Claude's estimates, with a short explainer for each.
-- **Extras:** dark mode, a gliding tab switcher, and an optional glowing edge (in Settings).
+- **Extras:** dark design, a bottom tab bar, workout vs rest day tracking, and an adjustable daily protein goal range (in Settings).
 
 ## Install it
 
