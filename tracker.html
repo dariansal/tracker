@@ -358,6 +358,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 .nrow .npct { min-width: 46px; white-space: nowrap; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .88rem; }
 .nrow.full .npct { color: var(--daily); }
 .nrow.over .npct { color: var(--danger); }
+.ncap { color: var(--muted); font-size: .8rem; margin: 0 0 4px; line-height: 1.35; }
 .nnote { color: var(--muted); font-size: .82rem; text-align: center; margin: 18px 4px 0; line-height: 1.4; }
 .nsheet { text-align: left; max-height: 82vh; overflow-y: auto; gap: 10px; }
 .nsheet .namt { text-align: center; color: var(--muted); margin: 0; }
@@ -593,7 +594,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     <p class="nsub" id="nSub"></p>
     <p class="status" id="nStatus" role="status"></p>
     <div id="nList"></div>
-    <p class="nnote">Weekly targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Plant compounds and EPA+DHA have no official targets, so those use commonly suggested amounts. Values come from the USDA database where possible, otherwise Claude's estimates. Tap any nutrient to learn more.</p>
+    <p class="nnote">Weekly targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Plant compounds and EPA+DHA have no official targets, so those use commonly suggested amounts; plant compounds are averaged over 4 weeks because your body stores them. Values come from the USDA database where possible, otherwise Claude's estimates. Tap any nutrient to learn more.</p>
   </div>
 </main>
 <nav class="tabs no-anim" role="tablist" aria-label="Sections">
@@ -1130,7 +1131,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.13.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.13.1";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1298,7 +1299,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     epa: "EPA + DHA combined", la: "linoleic acid (omega-6)", ala: "alpha-linolenic acid (omega-3)", cho: "choline, total", lz: "lutein + zeaxanthin" };
   const NORDER = ["a", "c", "d", "e", "k", "b1", "b2", "b3", "b5", "b6", "fol", "b12", "cho",
     "ca", "fe", "mg", "kp", "zn", "se", "ph", "cu", "mn", "fib", "ala", "epa", "la", "bc", "ac", "lz", "ly", "bx"];
-  const NGROUPS = [["vit", "Vitamins"], ["min", "Minerals"], ["fat", "Fiber & healthy fats"], ["plant", "Plant compounds (suggested targets)"]];
+  // [key, title, days covered]: plant compounds are stored in the body and swing a lot week to week, so they use 4 weeks
+  const NGROUPS = [["vit", "Vitamins", 7], ["min", "Minerals", 7], ["fat", "Fiber & healthy fats", 7], ["plant", "Plant compounds", 28]];
 
   const DEFAULT_OIL_TBSP = 1;
   const mk = (id, name, detail, per100, gPerCup, def, cooked, micro) => ({
@@ -2514,13 +2516,13 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const o = oilFood().per.kcal * OIL_G_PER_TBSP * (it.oil || 0);
     return f.per && f.per.kcal > 0 ? Math.max(0, (it.kcal || 0) - o) / f.per.kcal : 0;
   }
-  function weekStats(start) {
+  function weekStats(start, len = 7) {
     const tot = NUTR.map(() => 0), by = NUTR.map(() => ({}));
     let logged = 0, unknown = 0;
     const add = (micro, grams, label) => micro.forEach((v, j) => {
       if (v > 0 && grams > 0) { const a = v * grams / 100; tot[j] += a; by[j][label] = (by[j][label] || 0) + a; }
     });
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < len; i++) {
       const items = days[shift(start, i)] || [];
       if (items.length) logged++;
       items.forEach(it => {
@@ -2544,14 +2546,21 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (rel) { const sm = document.createElement("small"); sm.textContent = rel; wk.appendChild(sm); }
     $("nWeek").innerHTML = ""; $("nWeek").appendChild(wk);
     $("nNext").disabled = nWeek >= thisWeek;
-    const st = shownStats = weekStats(nWeek), n = Math.max(1, st.logged);
-    $("nSub").textContent = !st.logged ? "No food logged this week."
-      : `${st.logged} of 7 days logged, so targets cover ${st.logged} day${st.logged === 1 ? "" : "s"}` + (st.unknown ? ` · ${st.unknown} item${st.unknown === 1 ? "" : "s"} still being estimated` : "");
+    const wst = weekStats(nWeek), mstart = shift(nWeek, -21);
+    shownStats = { 7: wst, 28: weekStats(mstart, 28), mstart };
+    $("nSub").textContent = !wst.logged ? "No food logged this week."
+      : `${wst.logged} of 7 days logged, so targets cover ${wst.logged} day${wst.logged === 1 ? "" : "s"}` + (wst.unknown ? ` · ${wst.unknown} item${wst.unknown === 1 ? "" : "s"} still being estimated` : "");
     list.innerHTML = "";
-    if (!st.logged) return;
-    NGROUPS.forEach(([g, title]) => {
+    if (!wst.logged) return;
+    NGROUPS.forEach(([g, title, win]) => {
+      const st = shownStats[win], n = Math.max(1, st.logged);
       const sec = document.createElement("div"); sec.className = "ngroup";
       const h = document.createElement("h3"); h.textContent = title; sec.appendChild(h);
+      if (win === 28) {
+        const cap = document.createElement("p"); cap.className = "ncap";
+        cap.textContent = `4-week average, ${shortDate(mstart)} – ${shortDate(end)} (${st.logged} day${st.logged === 1 ? "" : "s"} logged). Suggested targets, no official ones.`;
+        sec.appendChild(cap);
+      }
       NORDER.forEach(key => {
         const j = NUTR.findIndex(x => x.k === key), nu = NUTR[j];
         if (!nu || nu.hidden || nu.g !== g) return;
@@ -2562,24 +2571,25 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
         const bar = document.createElement("span"); bar.className = "nbar"; const fill = document.createElement("i"); fill.style.width = Math.min(100, pct) + "%"; bar.appendChild(fill);
         const pc = document.createElement("span"); pc.className = "npct"; pc.textContent = Math.round(pct) + "%" + (!nu.limit && pct >= 100 ? " ✓" : "");
         b.append(nm, bar, pc);
-        b.setAttribute("aria-label", `${nu.name}: ${Math.round(pct)} percent of ${nu.limit ? "the weekly limit" : "the weekly target"}. Tap for details.`);
-        b.addEventListener("click", () => openNutr(j));
+        b.setAttribute("aria-label", `${nu.name}: ${Math.round(pct)} percent of ${win === 28 ? "the suggested amount over 4 weeks" : nu.limit ? "the weekly limit" : "the weekly target"}. Tap for details.`);
+        b.addEventListener("click", () => openNutr(j, win));
         sec.appendChild(b);
       });
       list.appendChild(sec);
     });
   }
-  function openNutr(j) {
-    const nu = NUTR[j], st = shownStats; if (!st) return;
+  function openNutr(j, win = 7) {
+    const nu = NUTR[j], st = shownStats && shownStats[win]; if (!st) return;
+    const span = win === 28 ? "over the last 4 weeks" : "this week";
     const n = Math.max(1, st.logged), target = nu.daily * n, pct = Math.round(st.tot[j] / target * 100);
     $("nTitle").textContent = nu.name;
     const body = $("nBody"); body.innerHTML = "";
     const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
     const amt = el("p", "namt"); const strong = el("strong", "", `${fmtN(st.tot[j])} ${nu.u}`);
-    amt.append(strong, document.createTextNode(` of ${fmtN(target)} ${nu.u} ${nu.limit ? "limit" : nu.sugg ? "suggested" : "target"} for ${n} day${n === 1 ? "" : "s"} (${pct}%)`));
-    body.append(amt, el("h4", "", "What it does"), el("p", "", nu.why), el("h4", "", "Good sources"), el("p", "", nu.src), el("h4", "", "Your top sources this week"));
+    amt.append(strong, document.createTextNode(` of ${fmtN(target)} ${nu.u} ${nu.limit ? "limit" : nu.sugg ? "suggested" : "target"} for ${n} day${n === 1 ? "" : "s"}${win === 28 ? " in 4 weeks" : ""} (${pct}%)`));
+    body.append(amt, el("h4", "", "What it does"), el("p", "", nu.why), el("h4", "", "Good sources"), el("p", "", nu.src), el("h4", "", `Your top sources ${span}`));
     const top = Object.entries(st.by[j]).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    if (!top.length) body.appendChild(el("p", "", "Nothing you logged this week had much of it."));
+    if (!top.length) body.appendChild(el("p", "", `Nothing you logged ${span} had much of it.`));
     else { const ul = el("ul"); top.forEach(([name, v]) => { const li = el("li", "", name + " "); li.appendChild(el("small", "", `${fmtN(v)} ${nu.u}`)); ul.appendChild(li); }); body.appendChild(ul); }
     $("nBack").hidden = false; $("nSheet").hidden = false;
     requestAnimationFrame(() => { $("nBack").classList.add("show"); $("nSheet").classList.add("show"); });

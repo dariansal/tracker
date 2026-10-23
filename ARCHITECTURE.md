@@ -93,7 +93,7 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 3. The text goes to `sample.json` to be turned into numbers. If that fails, `parseLabel()` handles common OCR errors ("g" read as "9", "O" read as "0"), picking the reading whose protein, carbs, and fat best match the printed calories.
 4. The serving is converted to the standard units: countable servings like "1 scoop (46g)" become **whole**; cups and tablespoons are kept, with grams per cup worked out; everything else becomes grams. The suggested name appears as gray placeholder text, and **space accepts it**.
 
-**Nutrients tab:** grouped bars (Vitamins / Minerals / Fiber & healthy fats / Plant compounds) for a Monday–Sunday week, ‹ › to browse back. Weekly target = adult male RDA/AI × days with food logged; EPA+DHA and plant compounds (`sugg: true`) use suggested amounts since they have no DRI. Tapping a row opens a sheet with what it does, good sources (static text in `NUTR`), and your top sources that week.
+**Nutrients tab:** grouped bars (Vitamins / Minerals / Fiber & healthy fats / Plant compounds) for a Monday–Sunday week, ‹ › to browse back. Weekly target = adult male RDA/AI × days with food logged (the Plant compounds group instead covers 28 days — the shown week plus the 3 before — via the window in `NGROUPS`); EPA+DHA and plant compounds (`sugg: true`) use suggested amounts since they have no DRI. Tapping a row opens a sheet with what it does, good sources (static text in `NUTR`), and your top sources that week.
 
 **Settings (gear):** the **Protein goal** range inputs (saved to the account) and the version number.
 

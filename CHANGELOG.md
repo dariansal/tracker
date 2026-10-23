@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.13.1 (2026-10-22)
+
+- The **Plant compounds** group on the Nutrients tab now shows a **4-week average** (the week you're viewing plus the three before it) instead of a single week, since your body stores these and they naturally swing week to week. Its targets are scaled to the days you logged in those 4 weeks. Everything else stays weekly.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.13.0 (2026-10-22)
 
 - Nutrients tab now tracks **31 nutrients**. Added: pantothenic acid (B5), choline, copper, manganese, omega-3 ALA, omega-3 EPA+DHA, omega-6, and a new **Plant compounds** group (beta-carotene, alpha-carotene, lutein+zeaxanthin, lycopene, beta-cryptoxanthin). Groups are now Vitamins, Minerals, Fiber & healthy fats, and Plant compounds.
