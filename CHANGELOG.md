@@ -2,6 +2,16 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.13.0 (2026-10-22)
+
+- Nutrients tab now tracks **31 nutrients**. Added: pantothenic acid (B5), choline, copper, manganese, omega-3 ALA, omega-3 EPA+DHA, omega-6, and a new **Plant compounds** group (beta-carotene, alpha-carotene, lutein+zeaxanthin, lycopene, beta-cryptoxanthin). Groups are now Vitamins, Minerals, Fiber & healthy fats, and Plant compounds.
+- **Sodium removed** from the list.
+- EPA+DHA and the plant compounds have no official targets, so they use commonly suggested amounts and say "suggested" in their details.
+- Foods you already have are filled in for the new nutrients automatically: USDA values where the food matches the database, otherwise Claude estimates only the new ones and keeps the values it already had.
+
+Assets changed: **usda-foods.js** (adds the 12 new nutrients; re-upload it). ocr-core.js and ocr-eng-data.js unchanged.
+New capabilities: none.
+
 ## 1.12.0 (2026-10-22)
 
 - New **Nutrients** tab (third tab in the bottom bar): weekly totals for 20 micronutrients, grouped into Vitamins (A, C, D, E, K, B1, B2, B3, B6, folate, B12), Minerals (calcium, iron, magnesium, potassium, zinc, selenium, phosphorus) and Other (fiber, and sodium as a limit). Weeks run Monday–Sunday with ‹ › to look back. Targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Tap a nutrient for what it does, foods rich in it, and your top sources that week.

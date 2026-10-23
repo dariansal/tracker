@@ -347,14 +347,15 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 .nsub { color: var(--muted); font-size: .9rem; margin: -4px 0 6px; text-align: center; }
 .ngroup { margin-top: 18px; }
 .ngroup h3 { font-size: .76rem; letter-spacing: .08em; color: var(--muted); margin: 0 0 2px; font-weight: 700; text-transform: uppercase; }
-.nrow { display: grid; grid-template-columns: 118px 1fr 50px; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 6px 2px;
+.nrow { display: grid; grid-template-columns: 45% 1fr auto; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 6px 2px;
   background: transparent; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; color: var(--ink); text-align: left; font-weight: 500; font-size: .95rem; }
 .nrow:last-child { border-bottom: 0; }
+.nrow > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nrow .nbar { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 18%, transparent); overflow: hidden; }
 .nrow .nbar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--weekly); }
 .nrow.full .nbar i { background: var(--daily); }
 .nrow.over .nbar i { background: var(--danger); }
-.nrow .npct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .88rem; }
+.nrow .npct { min-width: 46px; white-space: nowrap; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .88rem; }
 .nrow.full .npct { color: var(--daily); }
 .nrow.over .npct { color: var(--danger); }
 .nnote { color: var(--muted); font-size: .82rem; text-align: center; margin: 18px 4px 0; line-height: 1.4; }
@@ -592,7 +593,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     <p class="nsub" id="nSub"></p>
     <p class="status" id="nStatus" role="status"></p>
     <div id="nList"></div>
-    <p class="nnote">Weekly targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Values come from the USDA database where possible, otherwise Claude's estimates. Tap any nutrient to learn more.</p>
+    <p class="nnote">Weekly targets are 7× the daily amounts recommended for adult men, scaled to the days you logged food. Plant compounds and EPA+DHA have no official targets, so those use commonly suggested amounts. Values come from the USDA database where possible, otherwise Claude's estimates. Tap any nutrient to learn more.</p>
   </div>
 </main>
 <nav class="tabs no-anim" role="tablist" aria-label="Sections">
@@ -1129,7 +1130,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.12.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.13.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1276,10 +1277,28 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     { k: "zn", name: "Zinc", u: "mg", daily: 11, g: "min", why: "Supports immunity, wound healing, testosterone and your sense of taste.", src: "Beef, shellfish, pumpkin seeds, chickpeas, cashews" },
     { k: "se", name: "Selenium", u: "mcg", daily: 55, g: "min", why: "An antioxidant mineral that supports your thyroid and immune system.", src: "Brazil nuts (one or two is plenty), tuna, shrimp, eggs, chicken" },
     { k: "ph", name: "Phosphorus", u: "mg", daily: 700, g: "min", why: "Works with calcium to build bones, and helps your body store energy.", src: "Meat, fish, dairy, beans, nuts" },
-    { k: "fib", name: "Fiber", u: "g", daily: 38, g: "oth", why: "Keeps digestion regular, helps you feel full, and supports healthy cholesterol and blood sugar.", src: "Beans and lentils, oats, berries, vegetables, whole grains" },
-    { k: "na", name: "Sodium", u: "mg", daily: 2300, g: "oth", limit: true, why: "Needed for fluid balance and nerves, but most people get too much, which can raise blood pressure. This one is a limit to stay under, not a target.", src: "Mostly salt: packaged and restaurant food, sauces, deli meats, cheese, bread" },
+    { k: "fib", name: "Fiber", u: "g", daily: 38, g: "fat", why: "Keeps digestion regular, helps you feel full, and supports healthy cholesterol and blood sugar.", src: "Beans and lentils, oats, berries, vegetables, whole grains" },
+    { k: "na", name: "Sodium", u: "mg", daily: 2300, g: "oth", limit: true, hidden: true, why: "Needed for fluid balance and nerves, but most people get too much, which can raise blood pressure. This one is a limit to stay under, not a target.", src: "Mostly salt: packaged and restaurant food, sauces, deli meats, cheese, bread" },
+    // added in 1.13.0 (appended so food.micro arrays saved earlier stay valid)
+    { k: "cu", name: "Copper", u: "mg", daily: 0.9, g: "min", why: "Helps your body use iron, make red blood cells and connective tissue, and keeps nerves healthy.", src: "Cashews, sesame and sunflower seeds, shellfish, dark chocolate, lentils" },
+    { k: "mn", name: "Manganese", u: "mg", daily: 2.3, g: "min", why: "Supports bone formation, metabolism of carbs and fats, and an antioxidant enzyme.", src: "Oats, brown rice, pecans and hazelnuts, chickpeas, pineapple, spinach" },
+    { k: "b5", name: "Pantothenic B5", u: "mg", daily: 5, g: "vit", why: "Helps turn food into energy and make hormones and cholesterol.", src: "Chicken, beef, eggs, mushrooms, avocado, sunflower seeds" },
+    { k: "cho", name: "Choline", u: "mg", daily: 550, g: "vit", why: "Needed for memory and muscle control, building cell membranes, and moving fat out of the liver. Many people get less than the target.", src: "Eggs (especially yolks), beef, chicken, fish, soybeans, Brussels sprouts" },
+    { k: "ala", name: "Omega-3 ALA", u: "g", daily: 1.6, g: "fat", why: "The plant form of omega-3, an essential fat your body can't make. Supports heart health; the body converts only a little of it to EPA and DHA.", src: "Flaxseed, chia seeds, walnuts, canola and soybean oil" },
+    { k: "epa", name: "Omega-3 EPA+DHA", u: "mg", daily: 250, g: "fat", sugg: true, why: "The fish omega-3s. Linked to heart health and support brain and eye function. There's no official requirement; about 250 mg a day (roughly two servings of fatty fish a week) is the commonly suggested amount.", src: "Salmon, sardines, mackerel, trout, herring, anchovies; smaller amounts in eggs" },
+    { k: "la", name: "Omega-6", u: "g", daily: 17, g: "fat", why: "Linoleic acid, an essential fat for skin and cell membranes. Most people get plenty from cooking oils, nuts and seeds.", src: "Sunflower, soybean and corn oil, walnuts, sunflower seeds, pine nuts" },
+    { k: "bc", name: "Beta-carotene", u: "mcg", daily: 3000, g: "plant", sugg: true, why: "An orange plant pigment and antioxidant that your body turns into vitamin A as needed. No official target; the suggested amount reflects intakes linked to health benefits in studies. Best from food rather than supplements.", src: "Sweet potato, carrots, pumpkin, spinach and kale, cantaloupe" },
+    { k: "ac", name: "Alpha-carotene", u: "mcg", daily: 600, g: "plant", sugg: true, why: "A carotenoid antioxidant, partly converted to vitamin A. Higher intakes are linked to good health in studies, but there's no official target.", src: "Carrots, pumpkin, winter squash, sweet potato, green beans" },
+    { k: "lz", name: "Lutein+zeaxanthin", u: "mg", daily: 6, g: "plant", sugg: true, why: "Pigments that collect in your eyes' retina and help filter blue light; linked to lower risk of age-related eye disease. Suggested amount comes from eye-health studies.", src: "Kale, spinach, collard greens, egg yolks, corn, peas" },
+    { k: "ly", name: "Lycopene", u: "mg", daily: 10, g: "plant", sugg: true, why: "The red pigment in tomatoes, an antioxidant linked to heart and prostate health in studies. Cooked tomato products are absorbed best. No official target.", src: "Tomato paste and sauce, cooked tomatoes, watermelon, pink grapefruit, guava" },
+    { k: "bx", name: "Beta-cryptoxanthin", u: "mcg", daily: 500, g: "plant", sugg: true, why: "An orange carotenoid antioxidant, partly converted to vitamin A; linked to joint and lung health in studies. No official target.", src: "Tangerines, oranges, persimmons, papaya, red peppers, pumpkin" },
   ];
-  const NGROUPS = [["vit", "Vitamins"], ["min", "Minerals"], ["oth", "Other"]];
+  // display order (storage order is fixed above)
+  const UNITS_FOR_CLAUDE = { a: "vitamin A, RAE", e: "vitamin E, alpha-tocopherol", fol: "folate, DFE", kp: "potassium", ph: "phosphorus", mg: "magnesium",
+    epa: "EPA + DHA combined", la: "linoleic acid (omega-6)", ala: "alpha-linolenic acid (omega-3)", cho: "choline, total", lz: "lutein + zeaxanthin" };
+  const NORDER = ["a", "c", "d", "e", "k", "b1", "b2", "b3", "b5", "b6", "fol", "b12", "cho",
+    "ca", "fe", "mg", "kp", "zn", "se", "ph", "cu", "mn", "fib", "ala", "epa", "la", "bc", "ac", "lz", "ly", "bx"];
+  const NGROUPS = [["vit", "Vitamins"], ["min", "Minerals"], ["fat", "Fiber & healthy fats"], ["plant", "Plant compounds (suggested targets)"]];
 
   const DEFAULT_OIL_TBSP = 1;
   const mk = (id, name, detail, per100, gPerCup, def, cooked, micro) => ({
@@ -1290,13 +1309,13 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   });
   const DEFAULT_FOODS = [
     // micronutrients from USDA SR28 (same order as NUTR, per 100 g)
-    mk("banana", "Banana", "", [89, 1.1, 22.9, 0.3], 150, { amount: 118, unit: "g" }, false, [3, 8.7, 0, 0.1, 0.5, 0.031, 0.073, 0.665, 0.367, 20, 0, 5, 0.26, 27, 358, 0.15, 1, 22, 2.6, 1]),
-    mk("beef", "85/15 ground beef", "", [215, 18.7, 0, 15.2], 225, { amount: 8, unit: "oz" }, true, [4, 0, 0.1, 0.17, 1.3, 0.042, 0.151, 4.65, 0.346, 6, 2.17, 15, 2.09, 18, 295, 4.48, 15.8, 171, 0, 66]),
-    mk("rice", "White rice", "", [130, 2.7, 28.2, 0.3], 158, { amount: 1, unit: "cup" }, false, [0, 0, 0, 0.04, 0, 0.163, 0.013, 1.48, 0.093, 97, 0, 10, 1.2, 12, 35, 0.49, 7.5, 43, 0.4, 1]),
-    mk("chicken", "Chicken thighs", "", [120, 19.8, 0, 4.2], 140, { amount: 1.5, unit: "lb" }, true, [7, 0, 0, 0.18, 2.9, 0.088, 0.196, 5.56, 0.451, 4, 0.61, 7, 0.81, 23, 242, 1.58, 22.9, 185, 0, 95]),
-    mk("shrimp", "Shrimp", "", [85, 20.1, 0, 0.4], 145, { amount: 8, unit: "oz" }, true, [54, 0, 0.1, 1.32, 0.3, 0.02, 0.015, 1.78, 0.161, 19, 1.11, 64, 0.52, 35, 264, 1.34, 29.6, 214, 0, 119]),
+    mk("banana", "Banana", "", [89, 1.1, 22.9, 0.3], 150, { amount: 118, unit: "g" }, false, [3, 8.7, 0, 0.1, 0.5, 0.031, 0.073, 0.665, 0.367, 20, 0, 5, 0.26, 27, 358, 0.15, 1, 22, 2.6, 1, 0.078, 0.27, 0.334, 9.8, 0.027, 0, 0.046, 26, 25, 0.022, 0, 0]),
+    mk("beef", "85/15 ground beef", "", [215, 18.7, 0, 15.2], 225, { amount: 8, unit: "oz" }, true, [4, 0, 0.1, 0.17, 1.3, 0.042, 0.151, 4.65, 0.346, 6, 2.17, 15, 2.09, 18, 295, 4.48, 15.8, 171, 0, 66, 0.067, 0.01, 0.549, 61.2, 0.053, 3, 0.331, 0, 0, 0, 0, 0]),
+    mk("rice", "White rice", "", [130, 2.7, 28.2, 0.3], 158, { amount: 1, unit: "cup" }, false, [0, 0, 0, 0.04, 0, 0.163, 0.013, 1.48, 0.093, 97, 0, 10, 1.2, 12, 35, 0.49, 7.5, 43, 0.4, 1, 0.069, 0.472, 0.39, 2.1, 0.013, 0, 0.062, 0, 0, 0, 0, 0]),
+    mk("chicken", "Chicken thighs", "", [120, 19.8, 0, 4.2], 140, { amount: 1.5, unit: "lb" }, true, [7, 0, 0, 0.18, 2.9, 0.088, 0.196, 5.56, 0.451, 4, 0.61, 7, 0.81, 23, 242, 1.58, 22.9, 185, 0, 95, 0.062, 0.013, null, 53.6, 0.036, 9, 0.748, 0, 0, 0.11, 0, 0]),
+    mk("shrimp", "Shrimp", "", [85, 20.1, 0, 0.4], 145, { amount: 8, unit: "oz" }, true, [54, 0, 0.1, 1.32, 0.3, 0.02, 0.015, 1.78, 0.161, 19, 1.11, 64, 0.52, 35, 264, 1.34, 29.6, 214, 0, 119, 0.391, 0.033, 0.31, 80.9, 0.002, 61, 0.032, 0, 0, 0, 0, 0]),
     mk("salsa", "Homemade salsa", "", [27, 1, 5.7, 0.2], 240, { amount: 1.25, unit: "cup" }),
-    mk("oil", "Olive oil", "", [884, 0, 0, 100], 216, { amount: 1, unit: "tbsp" }, false, [0, 0, 0, 14.3, 60.2, 0, 0, 0, 0, 0, 0, 1, 0.56, 0, 1, 0, 0, 0, 0, 2]),
+    mk("oil", "Olive oil", "", [884, 0, 0, 100], 216, { amount: 1, unit: "tbsp" }, false, [0, 0, 0, 14.3, 60.2, 0, 0, 0, 0, 0, 0, 1, 0.56, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0.3, 0.761, 0, 9.76, 0, 0, 0, 0, 0]),
   ];
 
   // Bring foods saved in the older format (units like "banana", "scoop", "8 oz") into the weight format.
@@ -1342,7 +1361,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let entryDraft = null;    // { id, amount, unit, oil } while editing a logged entry's portion
   let foodFilter = "";      // text typed in the "Filter your foods" box
   let foodsReady = false;   // true once your saved food list has loaded (never write foods before this)
-  let npMicro = null;       // USDA micronutrients for the food being created from a search pick
+  let npMicro = null, npUsdaName = null;   // USDA micronutrients (and source row) for a food created from a search pick
   let microBusy = false, microTimer = null;
   let nWeek = null;         // Monday (YYYY-MM-DD) of the week shown on the Nutrients tab
   let shownStats = null;    // totals for that week, used by the detail sheet
@@ -1836,7 +1855,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   $("nName").addEventListener("input", () => { if ($("nName").value) $("nNameHint").hidden = true; });
   function openNewFood() {
     nameSuggestion = ""; $("nName").placeholder = "Name this food"; $("nNameHint").hidden = true;
-    npMicro = null;
+    npMicro = null; npUsdaName = null;
     closeAdder(); $("editPanel").hidden = true; editing = null;
     NF.forEach(id => $(id).value = "");
     unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, "g");
@@ -1845,7 +1864,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     setStatus(""); npClearError();
     $("newPanel").scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
-  function closeNewFood() { $("newPanel").hidden = true; npClearError(); npMicro = null; }
+  function closeNewFood() { $("newPanel").hidden = true; npClearError(); npMicro = null; npUsdaName = null; }
   function npClearError() { const e = $("npErr"); e.hidden = true; e.textContent = ""; }
   function npError(msg, focusId) {
     const e = $("npErr"); e.textContent = msg; e.hidden = false;
@@ -1991,7 +2010,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const f = { id: "c" + Date.now().toString(36), name, detail: "", base: "g",
       units: unitsWith(cupG, eachG),
       per: { kcal: nums[0] / grams, p: nums[1] / grams, c: nums[2] / grams, f: nums[3] / grams },
-      def: { amount: amt, unit }, custom: true, ...(npMicro ? { micro: npMicro, microSrc: "usda" } : {}) };
+      def: { amount: amt, unit }, custom: true, ...(npMicro ? { micro: npMicro, microSrc: "usda", usdaName: npUsdaName } : {}) };
     // show it right away and save in the background
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const sub = $("npSub").textContent;
@@ -2165,7 +2184,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
       hits.forEach(r => {
         const sv = usdaServing(r);
         row(r.name, `${r0(sv.kcal)} kcal, ${r0(sv.protein)} g protein per ${fmtAmt(sv.servingAmount, sv.servingUnit)}`, () => {
-          clearSearch(); openNewFood(); npMicro = r.micro;
+          clearSearch(); openNewFood(); npMicro = r.micro; npUsdaName = r.name;
           fillFromLabel(sv, "From the USDA database. Check the numbers and name, then save.", true);
         });
       });
@@ -2533,8 +2552,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     NGROUPS.forEach(([g, title]) => {
       const sec = document.createElement("div"); sec.className = "ngroup";
       const h = document.createElement("h3"); h.textContent = title; sec.appendChild(h);
-      NUTR.forEach((nu, j) => {
-        if (nu.g !== g) return;
+      NORDER.forEach(key => {
+        const j = NUTR.findIndex(x => x.k === key), nu = NUTR[j];
+        if (!nu || nu.hidden || nu.g !== g) return;
         const pct = st.tot[j] / (nu.daily * n) * 100;
         const b = document.createElement("button"); b.type = "button";
         b.className = "nrow" + (nu.limit ? (pct > 100 ? " over" : "") : (pct >= 100 ? " full" : ""));
@@ -2556,7 +2576,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const body = $("nBody"); body.innerHTML = "";
     const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
     const amt = el("p", "namt"); const strong = el("strong", "", `${fmtN(st.tot[j])} ${nu.u}`);
-    amt.append(strong, document.createTextNode(` of ${fmtN(target)} ${nu.u} ${nu.limit ? "limit" : "target"} for ${n} day${n === 1 ? "" : "s"} (${pct}%)`));
+    amt.append(strong, document.createTextNode(` of ${fmtN(target)} ${nu.u} ${nu.limit ? "limit" : nu.sugg ? "suggested" : "target"} for ${n} day${n === 1 ? "" : "s"} (${pct}%)`));
     body.append(amt, el("h4", "", "What it does"), el("p", "", nu.why), el("h4", "", "Good sources"), el("p", "", nu.src), el("h4", "", "Your top sources this week"));
     const top = Object.entries(st.by[j]).sort((a, b) => b[1] - a[1]).slice(0, 4);
     if (!top.length) body.appendChild(el("p", "", "Nothing you logged this week had much of it."));
@@ -2585,24 +2605,25 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   }
   async function ensureMicros() {
     if (microBusy || !storeReady || !foodsReady) return;
-    if (!foods.some(f => !Array.isArray(f.micro) && !f.microSrc)) return;
+    const needs = f => f.microSrc !== "unknown" && !(Array.isArray(f.micro) && f.micro.length >= NUTR.length);
+    if (!foods.some(needs)) return;
     microBusy = true;
     try {
       const res = {};
-      foods.forEach(f => { if (Array.isArray(f.micro) || f.microSrc) return; const d = DEFAULT_FOODS.find(x => x.id === f.id); if (d && d.micro) res[f.id] = { micro: d.micro, microSrc: "usda" }; });
-      let rest = foods.filter(f => !Array.isArray(f.micro) && !f.microSrc && !res[f.id]);
+      foods.forEach(f => { if (!needs(f)) return; const d = DEFAULT_FOODS.find(x => x.id === f.id); if (d && d.micro) res[f.id] = { micro: d.micro, microSrc: "usda" }; });
+      let rest = foods.filter(f => needs(f) && !res[f.id]);
       if (rest.length) {
         try { await loadUsda(); } catch {}
         if (usda) {
           const byName = new Map(usda.map(r => [r.name.toLowerCase(), r]));
-          rest.forEach(f => { const r = byName.get(f.name.trim().toLowerCase()); if (r && r.micro) res[f.id] = { micro: r.micro, microSrc: "usda" }; });
+          rest.forEach(f => { const r = byName.get((f.usdaName || f.name).trim().toLowerCase()); if (r && r.micro) res[f.id] = { micro: r.micro, microSrc: "usda" }; });
           rest = rest.filter(f => !res[f.id]);
         }
       }
       if (applyMicros(res)) { await saveFoods(); renderNutrients(); }
       await scanReady;
       if (!sampler || !rest.length) return;
-      const keys = NUTR.map(n => n.k);
+      const ask = NUTR.filter(n => !n.hidden), keys = ask.map(n => n.k);
       for (let i = 0; i < rest.length; i += 8) {
         const batch = rest.slice(i, i + 8);
         setNStatus(`Estimating nutrients for ${rest.length - i} food${rest.length - i === 1 ? "" : "s"}...`);
@@ -2611,7 +2632,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
           r = await sampler.json([
             "For each food below, estimate its micronutrients PER 100 GRAMS of the food as described (typical USDA-style values; for a branded or homemade item, typical values for that kind of food). Its kcal, protein, carbs and fat per 100 g are given to help identify it.",
             `Return ONLY a JSON object, no other text: {"items": [{"i": 0, ${keys.map(k => `"${k}": number`).join(", ")}}, ...]} with one object per food, where i is the food's number.`,
-            "Units: a = vitamin A (mcg RAE), c = vitamin C (mg), d = vitamin D (mcg), e = vitamin E (mg alpha-tocopherol), k = vitamin K (mcg), b1 = thiamin (mg), b2 = riboflavin (mg), b3 = niacin (mg), b6 = vitamin B6 (mg), fol = folate (mcg DFE), b12 = vitamin B12 (mcg), ca = calcium (mg), fe = iron (mg), mg = magnesium (mg), kp = potassium (mg), zn = zinc (mg), se = selenium (mcg), ph = phosphorus (mg), fib = fiber (g), na = sodium (mg).",
+            "Keys and units: " + ask.map(n => `${n.k} = ${UNITS_FOR_CLAUDE[n.k] || n.name} (${n.u})`).join(", ") + ".",
             "If you can't tell what a food is, return {\"i\": n, \"unknown\": true} for it.",
             "Foods:",
             ...batch.map((f, j) => `${j}. ${f.name}: ${r0(f.per.kcal * 100)} kcal, ${+(f.per.p * 100).toFixed(1)} g protein, ${+(f.per.c * 100).toFixed(1)} g carbs, ${+(f.per.f * 100).toFixed(1)} g fat per 100 g`),
@@ -2624,9 +2645,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
         const out = {};
         batch.forEach((f, j) => {
           const it = items.find(x => x && +x.i === j);
-          if (!it || it.unknown) { out[f.id] = { microSrc: "unknown" }; return; }
-          const micro = NUTR.map(nu => { const v = parseFloat(it[nu.k]); return isFinite(v) && v >= 0 && v < nu.daily * 50 ? +v.toPrecision(3) : null; });
-          out[f.id] = { micro, microSrc: "claude" };
+          if (!it || it.unknown) {   // can't identify it: don't ask again, but keep any values it already has
+            out[f.id] = Array.isArray(f.micro) ? { micro: NUTR.map((_, j) => j < f.micro.length ? f.micro[j] : null) } : { microSrc: "unknown" };
+            return;
+          }
+          const est = NUTR.map(nu => { const v = parseFloat(it[nu.k]); return !nu.hidden && isFinite(v) && v >= 0 && v < nu.daily * 200 ? +v.toPrecision(3) : null; });
+          // keep values a food already has (e.g. USDA ones), only fill in what's missing
+          const had = Array.isArray(f.micro) ? f.micro : [];
+          out[f.id] = { micro: NUTR.map((_, j) => j < had.length ? had[j] : est[j]), microSrc: f.microSrc && f.microSrc !== "unknown" ? f.microSrc : "claude" };
         });
         applyMicros(out); await saveFoods(); renderNutrients();
       }
