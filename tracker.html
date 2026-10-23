@@ -481,8 +481,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
         <div class="np-row">
           <div><label for="nAmt">Serving</label><input id="nAmt" type="number" inputmode="decimal" step="any" min="0"></div>
           <div><label for="nUnit">Unit</label><select id="nUnit"></select></div>
-          <div><label for="nCup">Grams in 1 cup</label><input id="nCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
-          <div><label for="nEach">Grams in 1 whole</label><input id="nEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
+          <div hidden><label for="nCup">Grams in 1 cup</label><input id="nCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
+          <div hidden><label for="nEach">Grams in 1 whole</label><input id="nEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
         </div>
         <div class="np-name"><label for="nName">Name</label><input id="nName" placeholder="Name this food" autocomplete="off">
           <p class="np-sub" id="nNameHint" style="margin:6px 0 0" hidden>Press space to use the suggested name, or type your own.</p></div>
@@ -528,8 +528,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       <div class="np-row" style="margin:0 0 10px">
         <div><label for="eAmt">Serving</label><input id="eAmt" type="number" inputmode="decimal" step="any" min="0"></div>
         <div><label for="eUnit">Unit</label><select id="eUnit"></select></div>
-        <div><label for="eCup">Grams in 1 cup</label><input id="eCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
-        <div><label for="eEach">Grams in 1 whole</label><input id="eEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
+        <div><label for="eCup">Grams in 1 cup (optional)</label><input id="eCup" type="number" inputmode="decimal" step="any" min="0" placeholder="For cups"></div>
+        <div><label for="eEach">Grams in 1 whole (optional)</label><input id="eEach" type="number" inputmode="decimal" step="any" min="0" placeholder="For whole"></div>
       </div>
       <div class="grid4">
         <div><label for="eK">kcal</label><input id="eK" type="number" inputmode="decimal" step="any" min="0"></div>
@@ -1074,7 +1074,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.10.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.10.1";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1190,6 +1190,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   const unitsWith = (cup, each) => ({ ...G, ...(cup > 0 ? { cup, tbsp: cup / 16 } : {}), ...(each > 0 ? { each } : {}) });
   const ALL_UNITS = { ...G, cup: 1, tbsp: 1 };
   const OIL_G_PER_TBSP = 13.5;
+  // When you enter a food by cups, tablespoons or "whole", the calories you type are for that serving,
+  // so no weight is needed. These stand-ins only matter if you later log it in grams/ounces/pounds.
+  const DEFAULT_CUP_G = 240, DEFAULT_EACH_G = 100;
   const DEFAULT_OIL_TBSP = 1;
   const mk = (id, name, detail, per100, gPerCup, def, cooked) => ({
     id, name, detail, base: "g",
@@ -1763,13 +1766,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   }
   $("npClose").addEventListener("click", closeNewFood);
   $("nUnit").addEventListener("change", () => {
+    // only convert the amount when the food's real weight is known (tbsp <-> cup is always a fixed ratio)
     const g = u => u === "each" ? parseFloat($("nEach").value) || 0 : VOL[u] ? (parseFloat($("nCup").value) || 0) * VOL[u] : G[u];
     const prev = $("nUnit").dataset.prev || "g", next = $("nUnit").value, a = parseFloat($("nAmt").value);
-    if (isFinite(a) && g(prev) && g(next)) {
-      const conv = a * g(prev) / g(next);
+    const both = VOL[prev] && VOL[next] ? [VOL[prev], VOL[next]] : g(prev) && g(next) ? [g(prev), g(next)] : null;
+    if (isFinite(a) && both) {
+      const conv = a * both[0] / both[1];
       $("nAmt").value = +conv.toFixed(conv < 1 ? 3 : conv < 10 ? 2 : 0);
-    } else if (next === "each" && !g(next)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("nEach").focus(); }
-    else if (VOL[next] && !g(next)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("nCup").focus(); }
+    }
     $("nUnit").dataset.prev = next;
   });
   $("npManual").addEventListener("click", () => { $("npRescan").hidden = true; showNewForm("Enter the numbers from the label."); });
@@ -1797,12 +1801,11 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (nameIsFinal) $("nName").value = nameSuggestion;
     let amt = parseFloat(r.servingAmount), unit = ["g", "oz", "lb", "cup", "tbsp", "each"].includes(r.servingUnit) ? r.servingUnit : "g";
     const each = parseFloat(r.gramsPerWhole);
-    if (unit === "each" && !(each > 0)) { unit = "g"; amt = parseFloat(r.servingGrams) > 0 ? parseFloat(r.servingGrams) : 100; }
+
     const sg = parseFloat(r.servingGrams);
     if (!(amt > 0)) { amt = sg > 0 ? sg : 100; unit = "g"; }
     let cup = parseFloat(r.gramsPerCup);
     if (VOL[unit] && !(cup > 0) && sg > 0) cup = sg / (amt * VOL[unit]);
-    if (VOL[unit] && !(cup > 0)) { unit = "g"; amt = sg > 0 ? sg : 100; }
     unitOptions($("nUnit"), { ...ALL_UNITS, each: 1 }, unit);
     $("nUnit").dataset.prev = unit;
     $("nAmt").value = +amt.toFixed(amt < 1 ? 3 : 1);
@@ -1881,13 +1884,13 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
 
   $("nAdd").addEventListener("click", async () => {
     const name = $("nName").value.trim() || nameSuggestion, unit = $("nUnit").value;
-    const amt = parseFloat($("nAmt").value), cupG = parseFloat($("nCup").value), eachG = parseFloat($("nEach").value);
+    const amt = parseFloat($("nAmt").value);
+    const cupG = parseFloat($("nCup").value) > 0 ? parseFloat($("nCup").value) : VOL[unit] ? DEFAULT_CUP_G : NaN;
+    const eachG = parseFloat($("nEach").value) > 0 ? parseFloat($("nEach").value) : unit === "each" ? DEFAULT_EACH_G : NaN;
     const nums = ["nK", "nP", "nC", "nF"].map(id => parseFloat($(id).value) || 0);
     npClearError();
     if (!name) { npError("Give the new food a name.", "nName"); return; }
     if (!(amt > 0)) { npError("Enter the serving size.", "nAmt"); return; }
-    if (VOL[unit] && !(cupG > 0)) { npError("Enter how many grams are in 1 cup of this food.", "nCup"); return; }
-    if (unit === "each" && !(eachG > 0)) { npError("Enter how many grams one whole item weighs (for example, one egg or one scoop).", "nEach"); return; }
     if (!nums[0]) { npError("Enter the calories for that serving.", "nK"); return; }
     const grams = amt * (unit === "each" ? eachG : VOL[unit] ? cupG * VOL[unit] : G[unit]);
     const f = { id: "c" + Date.now().toString(36), name, detail: "", base: "g",
@@ -2222,7 +2225,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   // the numbers shown are for the serving; they're stored per base unit
   let epPer = null;
   const MKEYS = [["eK", "kcal"], ["eP", "p"], ["eC", "c"], ["eF", "f"]];
-  const editUnitGrams = u => u === "each" ? (parseFloat($("eEach").value) || 0) : VOL[u] ? (parseFloat($("eCup").value) || 0) * VOL[u] : G[u];
+  const editUnitGrams = u => u === "each" ? (parseFloat($("eEach").value) || DEFAULT_EACH_G) : VOL[u] ? (parseFloat($("eCup").value) || DEFAULT_CUP_G) * VOL[u] : G[u];
   function servingFactor() {
     const a = parseFloat($("eAmt").value);
     return (isFinite(a) && a > 0 ? a : 1) * (editUnitGrams($("eUnit").value) || 1);
@@ -2242,14 +2245,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     // keep the same amount of food when switching units, e.g. 8 oz -> 0.5 lb
     const f = food(editing); if (!f) return;
     const prev = $("eUnit").dataset.prev, a = parseFloat($("eAmt").value);
-    const gPrev = editUnitGrams(prev), gNext = editUnitGrams($("eUnit").value);
-    if (isFinite(a) && gPrev && gNext) {
-      const conv = a * gPrev / gNext;
+    const next = $("eUnit").value;
+    const realG = u => u === "each" ? parseFloat($("eEach").value) || 0 : VOL[u] ? (parseFloat($("eCup").value) || 0) * VOL[u] : G[u];
+    const both = VOL[prev] && VOL[next] ? [VOL[prev], VOL[next]] : realG(prev) && realG(next) ? [realG(prev), realG(next)] : null;
+    if (isFinite(a) && both) {
+      const conv = a * both[0] / both[1];
       $("eAmt").value = +conv.toFixed(conv < 1 ? 3 : conv < 10 ? 2 : 0);
     }
     $("eUnit").dataset.prev = $("eUnit").value;
-    if (VOL[$("eUnit").value] && !gNext) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("eCup").focus(); }
-    if ($("eUnit").value === "each" && !gNext) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("eEach").focus(); }
     fillEditMacros();
   });
   $("epClose").addEventListener("click", closeEdit);
@@ -2261,10 +2264,8 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     if (!name) { setStatus("The food needs a name.", true); $("eName").focus(); return; }
     if (!isFinite(amt) || amt <= 0) { setStatus("Enter a serving size greater than zero.", true); $("eAmt").focus(); return; }
     if (v.some(x => !isFinite(x) || x < 0)) { setStatus("Fill in all four numbers (use 0 for none).", true); return; }
-    const cupG = parseFloat($("eCup").value);
-    const eachG = parseFloat($("eEach").value);
-    if (VOL[unit] && !(cupG > 0)) { setStatus("Enter how many grams are in 1 cup of this food.", true); $("eCup").focus(); return; }
-    if (unit === "each" && !(eachG > 0)) { setStatus("Enter how many grams one whole item weighs (for example, one egg or one scoop).", true); $("eEach").focus(); return; }
+    const cupG = parseFloat($("eCup").value) > 0 ? parseFloat($("eCup").value) : VOL[unit] ? DEFAULT_CUP_G : NaN;
+    const eachG = parseFloat($("eEach").value) > 0 ? parseFloat($("eEach").value) : unit === "each" ? DEFAULT_EACH_G : NaN;
     const k = amt * (unit === "each" ? eachG : VOL[unit] ? cupG * VOL[unit] : G[unit]);
     const per = { kcal: +(v[0] / k).toFixed(6), p: +(v[1] / k).toFixed(6), c: +(v[2] / k).toFixed(6), f: +(v[3] / k).toFixed(6) };
     const units = unitsWith(cupG, eachG);

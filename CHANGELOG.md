@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.10.1 (2026-10-22)
+
+- Fix: adding a food whose serving is in **tablespoons, cups, or "whole"** no longer asks for a gram weight. Enter the serving (e.g. "2 tablespoons") and the calories/macros for it, and save. The "Grams in 1 cup" and "Grams in 1 whole" boxes are gone from the new-food form; in Edit they're now optional. Without them, the app assumes 240 g per cup (15 g per tablespoon) and 100 g per whole item, which only affects converting that food to grams/ounces/pounds — the calories for the serving you entered are always exact.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.10.0 (2026-10-08)
 
 - **Workout days are now the default.** Every day counts as a workout day unless you tap the dumbbell to mark it a **rest** day — the opposite of before. Your existing data is converted automatically: days you'd already marked as workouts stay workouts, and days with food logged that you hadn't marked become rest days, so the "Workout days vs rest days" comparison and the chart dots look the same as before.
