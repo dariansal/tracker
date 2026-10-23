@@ -27,7 +27,7 @@ body {
   font: 16px/1.5 "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
 }
-main { max-width: 760px; margin: 0 auto; padding: 28px 18px 48px; }
+main { max-width: 760px; margin: 0 auto; padding: 28px 18px calc(96px + env(safe-area-inset-bottom, 0px)); }
 h1 {
   font-family: "Fraunces", Georgia, "Times New Roman", serif;
   font-weight: 600; font-size: 2rem; line-height: 1.15; margin: 0 0 4px;
@@ -128,8 +128,7 @@ table.wk td small { color: var(--muted); }
 /* settings */
 .top { position: relative; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 10px !important; }
 .top h1 { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
-.top .tabs { flex: 0 0 auto; }
-@media (max-width: 400px) { .top h1 { font-size: 1.5rem; } .tabs button { padding: 0 14px; } }
+@media (max-width: 400px) { .top h1 { font-size: 1.5rem; } }
 .gear { flex: 0 0 auto; min-height: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
   background: var(--card); color: var(--muted); border: 1px solid var(--rule); border-radius: 12px; }
 .gear:hover { color: var(--ink); }
@@ -156,12 +155,18 @@ input.toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly)
 /* app shell */
 .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .top h1 { margin: 0; }
-.tabs { position: relative; display: inline-flex; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 4px; gap: 4px; }
-.tabs button { position: relative; z-index: 1; min-height: 40px; padding: 0 18px; background: transparent; color: var(--muted); border: 0; border-radius: 9px; font-weight: 600; transition: color .28s ease; }
-.tabs button[aria-selected="true"] { color: var(--card); }
+/* bottom tab bar */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; justify-content: center; gap: 4px;
+  background: color-mix(in srgb, var(--card) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-top: 1px solid var(--rule); padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.tabs button { position: relative; z-index: 1; flex: 0 1 180px; min-height: 52px; padding: 4px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: transparent; color: var(--muted); border: 0; border-radius: 12px; font-weight: 600; font-size: .78rem; transition: color .2s ease; }
+.tabs button svg { display: block; }
+.tabs button[aria-selected="true"] { color: var(--weekly); }
+.tabs.kb-hidden { display: none; }
 .tab-pill {
-  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0;
-  background: var(--weekly); border-radius: 9px; pointer-events: none;
+  position: absolute; z-index: 0; top: 6px; height: 52px; left: 0; width: 0;
+  background: color-mix(in srgb, var(--weekly) 14%, transparent); border-radius: 12px; pointer-events: none;
   transition: transform .32s cubic-bezier(.3, .7, .2, 1), width .32s cubic-bezier(.3, .7, .2, 1);
 }
 .tabs.no-anim .tab-pill, .tabs.no-anim button { transition: none; }
@@ -344,11 +349,6 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 <main>
   <header class="top">
     <h1>Tracker</h1>
-    <nav class="tabs no-anim" role="tablist" aria-label="Sections">
-      <span class="tab-pill" aria-hidden="true"></span>
-      <button type="button" role="tab" id="tab-weight" aria-controls="pane-weight" aria-selected="true">Weight</button>
-      <button type="button" role="tab" id="tab-food" aria-controls="pane-food" aria-selected="false">Food</button>
-    </nav>
     <button type="button" class="gear" id="openSettings" aria-label="Settings" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
     </button>
@@ -561,6 +561,17 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     </div>
   </div>
 </main>
+<nav class="tabs no-anim" role="tablist" aria-label="Sections">
+  <span class="tab-pill" aria-hidden="true"></span>
+  <button type="button" role="tab" id="tab-weight" aria-controls="pane-weight" aria-selected="true">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8 11a4 4 0 0 1 8 0"/><path d="M12 11l1.8-2.4"/></svg>
+    <span>Weight</span>
+  </button>
+  <button type="button" role="tab" id="tab-food" aria-controls="pane-food" aria-selected="false">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v7a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2V2"/><path d="M7.5 2v20"/><path d="M20 15V2a4.5 4.5 0 0 0-4.5 4.5V13a2 2 0 0 0 2 2H20Zm0 0v7"/></svg>
+    <span>Food</span>
+  </button>
+</nav>
 <div class="sheet-back" id="setBack" hidden></div>
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
   <b id="setTitle">Settings</b>
@@ -1074,7 +1085,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.10.1";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.11.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1161,6 +1172,10 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("no-anim")));
   window.addEventListener("resize", placePill);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+  // tuck the bar away while typing so it doesn't ride up on top of the phone's keyboard
+  const typing = el => el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "file"].includes(el.type)));
+  document.addEventListener("focusin", e => { if (typing(e.target)) bar.classList.add("kb-hidden"); });
+  document.addEventListener("focusout", () => setTimeout(() => { if (!typing(document.activeElement)) { bar.classList.remove("kb-hidden"); placePill(); } }, 50));
 })();
 
 // ================= food =================

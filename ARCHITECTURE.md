@@ -31,12 +31,12 @@ Search for these markers; line numbers drift.
 | Part | Marker | What it does |
 |---|---|---|
 | Styles | `<style>` | Theme tokens on `:root` (dark only), layout, components. Colors: `--weekly` (primary blue), `--daily` (sage). |
-| Markup | `<main>` | Header (title "Tracker", tab switcher, gear), `#pane-weight`, `#pane-food`, then the settings sheet. |
+| Markup | `<main>` | Header (title "Tracker", gear), `#pane-weight`, `#pane-food`, then the fixed **bottom tab bar** (`nav.tabs`, Weight/Food with icons; hidden while an input is focused so it doesn't ride on the keyboard) and the settings sheet. |
 | Weight module | first `<script>` | IIFE: weigh-ins, charts, weekly table, maintenance estimate, height and age profile. |
 | Version | `// ===== version` | `APP_VERSION`, shown at the bottom of Settings. |
 | Preferences | `// ===== preferences` | `window.appPrefs` (`proteinLow`, `proteinHigh`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
 | Settings panel | `// ===== settings panel` | Gear button, bottom sheet, appearance (sun/moon) toggle. |
-| Tabs | `// ===== tabs` | Weight/Food switcher with a gliding pill; remembers the last tab (localStorage `log-tab`). |
+| Tabs | `// ===== tabs` | Bottom Weight/Food bar with a gliding highlight; remembers the last tab (localStorage `log-tab`); hides while typing. |
 | Food module | `// ===== food` | IIFE containing everything below. |
 | ↳ storage | `// ---------- storage` | Load and save days and foods; db with localStorage fallback. |
 | ↳ log panel | `// ---------- adder` | Panel shown when a food is tapped: amount, unit, cooking oil, pencil rename, Add to day. |

@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.11.0 (2026-10-22)
+
+- The **Weight / Food tabs are now a bar along the bottom of the screen**, with an icon and label for each, like a regular iPhone app. The title and the gear stay at the top. The bar tucks away while you're typing so it doesn't sit on top of the keyboard.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.10.1 (2026-10-22)
 
 - Fix: adding a food whose serving is in **tablespoons, cups, or "whole"** no longer asks for a gram weight. Enter the serving (e.g. "2 tablespoons") and the calories/macros for it, and save. The "Grams in 1 cup" and "Grams in 1 whole" boxes are gone from the new-food form; in Edit they're now optional. Without them, the app assumes 240 g per cup (15 g per tablespoon) and 100 g per whole item, which only affects converting that food to grams/ounces/pounds — the calories for the serving you entered are always exact.
