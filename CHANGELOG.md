@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.14.0 (2026-10-22)
+
+- **Swipe across the bottom bar to switch tabs.** Swipe in the direction of the tab you want: on Food, swipe left for Weight or right for Nutrients. Each swipe moves one tab; tapping works as before.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.13.1 (2026-10-22)
 
 - The **Plant compounds** group on the Nutrients tab now shows a **4-week average** (the week you're viewing plus the three before it) instead of a single week, since your body stores these and they naturally swing week to week. Its targets are scaled to the days you logged in those 4 weeks. Everything else stays weekly.

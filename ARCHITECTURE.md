@@ -36,7 +36,7 @@ Search for these markers; line numbers drift.
 | Version | `// ===== version` | `APP_VERSION`, shown at the bottom of Settings. |
 | Preferences | `// ===== preferences` | `window.appPrefs` (`proteinLow`, `proteinHigh`), `window.setPref()`. Saved to `settings/prefs` plus localStorage; fires a `prefs-changed` event. |
 | Settings panel | `// ===== settings panel` | Gear button, bottom sheet, appearance (sun/moon) toggle. |
-| Tabs | `// ===== tabs` | Bottom Weight/Food/Nutrients bar (fires `tab-shown`) with a gliding highlight; remembers the last tab (localStorage `log-tab`); hides while typing. |
+| Tabs | `// ===== tabs` | Bottom Weight/Food/Nutrients bar (fires `tab-shown`); a horizontal swipe on the bar moves one tab in the swipe direction, and the click that ends a swipe is swallowed with a gliding highlight; remembers the last tab (localStorage `log-tab`); hides while typing. |
 | Food module | `// ===== food` | IIFE containing everything below. |
 | ↳ storage | `// ---------- storage` | Load and save days and foods; db with localStorage fallback. |
 | ↳ log panel | `// ---------- adder` | Panel shown when a food is tapped: amount, unit, cooking oil, pencil rename, Add to day. |

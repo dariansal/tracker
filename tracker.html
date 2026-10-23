@@ -164,6 +164,7 @@ input.toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--weekly)
 .tabs button svg { display: block; }
 .tabs button[aria-selected="true"] { color: var(--weekly); }
 .tabs.kb-hidden { display: none; }
+.tabs { touch-action: none; user-select: none; -webkit-user-select: none; }
 .tab-pill {
   position: absolute; z-index: 0; top: 6px; height: 52px; left: 0; width: 0;
   background: color-mix(in srgb, var(--weekly) 14%, transparent); border-radius: 12px; pointer-events: none;
@@ -1131,7 +1132,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.13.1";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.14.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1220,6 +1221,21 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("no-anim")));
   window.addEventListener("resize", placePill);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+  // swipe across the bar to switch tabs, in the direction you swipe (on Food, swipe left -> Weight)
+  const order = Object.keys(tabs);
+  let sx = null, sy = 0, swiped = false;
+  bar.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; swiped = false; });
+  bar.addEventListener("pointerup", e => {
+    if (sx == null) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+    if (Math.abs(dx) < 36 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const i = order.indexOf(current) + (dx < 0 ? -1 : 1);
+    swiped = true;
+    if (i >= 0 && i < order.length) show(order[i]);
+  });
+  bar.addEventListener("pointercancel", () => { sx = null; });
+  // a swipe that ends on a tab shouldn't also count as tapping that tab
+  bar.addEventListener("click", e => { if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); } }, true);
   // tuck the bar away while typing so it doesn't ride up on top of the phone's keyboard
   const typing = el => el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" || (el.tagName === "INPUT" && !["checkbox", "radio", "button", "file"].includes(el.type)));
   document.addEventListener("focusin", e => { if (typing(e.target)) bar.classList.add("kb-hidden"); });
