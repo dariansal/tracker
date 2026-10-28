@@ -248,6 +248,9 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .item .what { min-width: 0; }
 .item .what small { display: block; color: var(--muted); }
 .item .rowacts { display: flex; gap: 8px; flex-shrink: 0; }
+.item.wide { flex-wrap: wrap; row-gap: 8px; }
+.item.wide .what { flex: 1 1 100%; }
+.item.wide .rowacts { flex: 1 1 100%; justify-content: flex-end; }
 .item .edit { min-height: 34px; padding: 0 12px; background: transparent; color: var(--weekly); border-color: var(--rule); font-weight: 500; }
 .item.editing { display: block; }
 .ed-name { margin-bottom: 2px; }
@@ -1132,7 +1135,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.14.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.15.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1383,6 +1386,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let microBusy = false, microTimer = null;
   let nWeek = null;         // Monday (YYYY-MM-DD) of the week shown on the Nutrients tab
   let shownStats = null;    // totals for that week, used by the detail sheet
+  const justCopied = {};    // item id -> time until which its "+ Today" button shows "Added ✓"
   let lastTap = { id: null, t: 0 }, tileRenaming = null;   // double-tap-to-rename state
   let lastShared = "";      // last calorie map sent to the weight section
 
@@ -2513,7 +2517,27 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
         holdInPlace($("fList"), () => { days[key] = before.filter(x => x.id !== i.id); render(); });
         if (await saveDay(key)) setStatus(`Removed ${i.name.toLowerCase()}.`); else { days[key] = before; render(); }
       });
-      const acts = document.createElement("div"); acts.className = "rowacts"; acts.append(edit, del);
+      const acts = document.createElement("div"); acts.className = "rowacts";
+      const today = iso(new Date());
+      if (day !== today) {
+        // copy just this item onto today, same amount; stay on this day so you can grab more
+        row.classList.add("wide");
+        const cp = document.createElement("button"); cp.type = "button"; cp.className = "edit"; cp.textContent = "+ Today";
+        cp.setAttribute("aria-label", `Add ${itemLabel(i)} to today`);
+        if (justCopied[i.id] > Date.now()) { cp.disabled = true; cp.textContent = "Added ✓"; }
+        cp.addEventListener("click", async () => {
+          const copy = { ...i, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) };
+          days[today] = [...(days[today] || []), copy];
+          bumpUsage(i.food);
+          justCopied[i.id] = Date.now() + 1500; cp.disabled = true; cp.textContent = "Added ✓";
+          setTimeout(() => { delete justCopied[i.id]; render(); }, 1550);
+          publishCalories(); renderNutrients();
+          if (await saveDay(today)) setStatus(`Added ${itemLabel(i)} to today.`);
+          else { days[today] = (days[today] || []).filter(x => x.id !== copy.id); render(); }
+        });
+        acts.append(cp);
+      }
+      acts.append(edit, del);
       row.append(w, acts); list.appendChild(row);
     });
     $("fCopy").hidden = items.length > 0 || !(days[shift(day, -1)] || []).length;

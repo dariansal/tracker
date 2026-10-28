@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.15.0 (2026-10-27)
+
+- When you look at a **past day** on the Food tab, every item in its Eaten list has a **+ Today** button that copies just that item (same amount) onto today. You stay on the day you're viewing, so you can pick several. "Copy the day before" for a whole empty day still works as before.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.14.0 (2026-10-22)
 
 - **Swipe across the bottom bar to switch tabs.** Swipe in the direction of the tab you want: on Food, swipe left for Weight or right for Nutrients. Each swipe moves one tab; tapping works as before.
