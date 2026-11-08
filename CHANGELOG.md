@@ -2,6 +2,13 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.16.0 (2026-11-07)
+
+- **Averages no longer include today**, since today isn't finished until it's over. This applies to the maintenance estimate ("You averaged … kcal a day"), the Avg calories column in the week-by-week table, the weekly chart's readout, the Workout days vs rest days comparison, and the Nutrients tab (targets now cover only finished days; it says "Today is added once it's over."). Today's own totals and protein bar on the Food tab are unchanged.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.15.0 (2026-10-27)
 
 - When you look at a **past day** on the Food tab, every item in its Eaten list has a **+ Today** button that copies just that item (same amount) onto today. You stay on the day you're viewing, so you can pick several. "Copy the day before" for a whole empty day still works as before.

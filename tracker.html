@@ -663,6 +663,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
   const monday = d => { const x = new Date(d); const off = (x.getDay() + 6) % 7; x.setDate(x.getDate() - off); return x; };
   const fmtShort = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // calories for finished days only: today is still being logged, so averages leave it out
+  const pastKcal = () => { const kc = { ...((window.appShared && window.appShared.kcal) || {}) }; delete kc[iso(new Date())]; return kc; };
   const fmtLong = d => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   const lb = v => v.toFixed(1);
 
@@ -984,7 +986,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     const endKey = daily[daily.length - 1].key;
     const end = dayNum(endKey), start = end - (WINDOW_DAYS - 1);
     const w = daily.filter(p => dayNum(p.key) >= start);
-    const kc = window.appShared && window.appShared.kcal || {};
+    const kc = pastKcal();
     const foodKeys = Object.keys(kc).filter(k => { const n = dayNum(k); return n >= start && n <= end && kc[k] > 0; });
     const span = w.length ? dayNum(w[w.length - 1].key) - dayNum(w[0].key) + 1 : 0;
     const res = { ok: false, weighins: w.length, foodDays: foodKeys.length, span };
@@ -1041,7 +1043,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   function renderWeekTable(daily, weekly) {
     const t = $("wkTable"); t.innerHTML = "";
     if (!weekly.length) { t.innerHTML = `<tr><td class="muted" style="text-align:left;color:var(--muted)">Your weeks will show up here once you log a weigh-in.</td></tr>`; return; }
-    const kc = window.appShared && window.appShared.kcal || {};
+    const kc = pastKcal();
     t.innerHTML = `<thead><tr><th>Week of</th><th>Avg weight</th><th>Change</th><th>Avg calories</th></tr></thead>`;
     const tb = document.createElement("tbody");
     [...weekly].reverse().forEach((w, idx, arr) => {
@@ -1106,7 +1108,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       empty: "Your weekly averages will show up here.",
       describe: p => {
         const end = new Date(p.x); end.setDate(end.getDate() + 6);
-        const kc = (window.appShared && window.appShared.kcal) || {};
+        const kc = pastKcal();
         const logged = [...Array(7)].map((_, i) => { const d = new Date(p.x); d.setDate(d.getDate() + i); return iso(d); }).filter(k => kc[k] > 0);
         const cal = logged.length ? `, ${fmtK(logged.reduce((a, k) => a + kc[k], 0) / logged.length)} kcal a day` : "";
         return `Week of ${fmtShort(p.x)} to ${fmtShort(end)}: ${lb(p.y)} lb average${cal}`;
@@ -1135,7 +1137,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.15.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.16.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -2427,8 +2429,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   // Compare calories eaten on workout days vs rest days (only days with food logged; every day is a workout day unless marked rest).
   function renderWorkoutStats() {
     const el = $("wkStats");
-    const w = [], r = [];
+    const w = [], r = [], today = iso(new Date());
     Object.keys(days).forEach(k => {
+      if (k === today) return;   // today isn't finished yet
       const t = (days[k] || []).reduce((a, i) => a + (i.kcal || 0), 0);
       if (t > 0) (isRestDay(k) ? r : w).push(t);
     });
@@ -2443,6 +2446,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     $("wkStatsBody").innerHTML = row("Workout days", aw, w.length) + row("Rest days", ar, r.length) + `<p class="wksum">${sum}</p>`;
     el.hidden = false;
   }
+
+  // If the tracker stays open past midnight, refresh so yesterday joins the averages.
+  let shownToday = iso(new Date());
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || iso(new Date()) === shownToday) return;
+    shownToday = iso(new Date());
+    render(); window.dispatchEvent(new Event("food-updated"));
+  });
 
   function render() {
     publishCalories();
@@ -2559,11 +2570,14 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   function weekStats(start, len = 7) {
     const tot = NUTR.map(() => 0), by = NUTR.map(() => ({}));
     let logged = 0, unknown = 0;
+    const today = iso(new Date());
     const add = (micro, grams, label) => micro.forEach((v, j) => {
       if (v > 0 && grams > 0) { const a = v * grams / 100; tot[j] += a; by[j][label] = (by[j][label] || 0) + a; }
     });
     for (let i = 0; i < len; i++) {
-      const items = days[shift(start, i)] || [];
+      const k = shift(start, i);
+      if (k === today) continue;   // today isn't finished yet, so it counts from tomorrow
+      const items = days[k] || [];
       if (items.length) logged++;
       items.forEach(it => {
         const f = food(it.food);
@@ -2588,8 +2602,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     $("nNext").disabled = nWeek >= thisWeek;
     const wst = weekStats(nWeek), mstart = shift(nWeek, -21);
     shownStats = { 7: wst, 28: weekStats(mstart, 28), mstart };
-    $("nSub").textContent = !wst.logged ? "No food logged this week."
-      : `${wst.logged} of 7 days logged, so targets cover ${wst.logged} day${wst.logged === 1 ? "" : "s"}` + (wst.unknown ? ` · ${wst.unknown} item${wst.unknown === 1 ? "" : "s"} still being estimated` : "");
+    const todayNote = nWeek === thisWeek && (days[iso(new Date())] || []).length ? "Today is added once it's over." : "";
+    $("nSub").textContent = !wst.logged ? (todayNote ? `Nothing logged before today this week. ${todayNote}` : "No food logged this week.")
+      : `${wst.logged} of 7 days logged, so targets cover ${wst.logged} day${wst.logged === 1 ? "" : "s"}` + (wst.unknown ? ` · ${wst.unknown} item${wst.unknown === 1 ? "" : "s"} still being estimated` : "") + (todayNote ? ` · ${todayNote}` : "");
     list.innerHTML = "";
     if (!wst.logged) return;
     NGROUPS.forEach(([g, title, win]) => {

@@ -76,6 +76,7 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 - Redraws keep your scroll position (`holdInPlace`, `scrollY` restore); the page must not jump.
 - Week-by-week table: average weight, change from the previous week (neutral colors, since gaining isn't marked as bad), and average daily calories.
 - Maintenance calories: over the last 28 days, the least-squares weight trend (lb/day) and the average calories on logged days. Maintenance ≈ average kcal − slope × 3500. Needs 10 weigh-ins, 10 food days, and a 14-day span; until then it shows a progress bar and an optional Mifflin-St Jeor × 1.9 estimate from height and age. The card is compact and sits just above "All weigh-ins".
+- **Averages leave out today** (owner's request, 1.16.0): today is still being logged, so the maintenance estimate, week-table calories, weekly-chart readout, workout-vs-rest comparison, and Nutrients totals only count finished days (`pastKcal()` in the weight module, `today` skips in `renderWorkoutStats`/`weekStats`). A `visibilitychange` handler re-renders after midnight so yesterday joins the averages.
 
 **Food tab** (top to bottom)
 - Day switcher and totals (kcal, protein, carbs, fat).
