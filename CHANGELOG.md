@@ -2,6 +2,15 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.18.0 (2026-11-21)
+
+- **Jump around by date on the Food tab.** Next to the date there's now a **calendar icon**: tap it for a month calendar (weeks start Monday). Use ‹ › or swipe to change months, and days with food logged have a dot. Tap any day to go there, or tap **Today**. When you're on any day other than today, a **Today** button also appears right next to the date.
+- **Weight tab is cleaner:** removed the descriptions ("One weigh-in a day…", "Mean of each Monday-to-Sunday week.", the week-by-week and maintenance captions).
+- **Week by week:** removed the "5 days"/"7 days" under Avg kcal, and the Week column is narrower so the other columns sit further left.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.17.0 (2026-11-21)
 
 - **Workout and rest days are removed** from the app: the dumbbell by the date, the solid/open dots and legend on the "Day by day" chart, and the "Workout days vs rest days" section. Any workout marks you saved are left untouched in storage but no longer used.

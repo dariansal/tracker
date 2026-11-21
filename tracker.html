@@ -115,10 +115,9 @@ summary { cursor: pointer; font-weight: 600; }
 table.wk { width: 100%; border-collapse: collapse; font-size: .92rem; }
 table.wk th { text-align: right; font-weight: 500; color: var(--muted); font-size: .8rem; padding: 6px 6px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 table.wk td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
-table.wk th:first-child, table.wk td:first-child { text-align: left; }
+table.wk th:first-child, table.wk td:first-child { text-align: left; width: 1%; }   /* Week column hugs its dates */
 table.wk tr:last-child td { border-bottom: 0; }
 table.wk td small { color: var(--muted); }
-table.wk .wkdays { display: block; font-size: .75rem; margin-top: 1px; }
 .up, .down { color: var(--ink); }
 
 /* protein goal range control in Settings */
@@ -206,6 +205,19 @@ h2.sec { font-size: 1.05rem; font-weight: 600; margin: 26px 2px 10px; }
 .pscale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .pscale .pmet { color: var(--daily); font-weight: 700; }
 #fDayText { text-align: center; }
+.daybar .dicon { min-width: 36px; min-height: 36px; height: 36px; padding: 0; border-radius: 999px; color: var(--muted); display: grid; place-items: center; font-size: 1rem; }
+.daybar .dtoday { min-width: 0; min-height: 32px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: .85rem; color: var(--weekly); border-color: var(--weekly); background: transparent; }
+/* month calendar sheet */
+.calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.calhead button { min-width: 46px; padding: 0; font-size: 1.3rem; background: var(--card); color: var(--ink); border-color: var(--rule); }
+.calgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; touch-action: pan-y; }
+.calwk span { color: var(--muted); font-size: .75rem; font-weight: 600; padding: 2px 0; }
+.calgrid .cd { position: relative; min-height: 44px; padding: 0; border-radius: 999px; background: transparent; border-color: transparent; color: var(--ink); font-weight: 500; }
+.calgrid .cd.future { color: var(--muted); }
+.calgrid .cd.today { border-color: var(--weekly); color: var(--weekly); font-weight: 700; }
+.calgrid .cd.sel { background: var(--weekly); border-color: var(--weekly); color: var(--card); font-weight: 700; }
+.calgrid .cd.has::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--daily); }
+.calgrid .cd.sel.has::after { background: var(--card); }
 .np-err { margin: 2px 0 12px; color: var(--danger); font-size: .92rem; font-weight: 600; }
 @media (max-width: 420px) { .totals { grid-template-columns: 1fr; } .totals .kcal { text-align: center; } }
 
@@ -371,8 +383,6 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
     </button>
   </header>
   <div id="pane-weight" role="tabpanel" aria-labelledby="tab-weight">
-  <p class="lede">One weigh-in a day. The weekly average smooths out water and salt swings.</p>
-
   <form class="entry" id="entry" autocomplete="off">
     <div>
       <label for="date">Date</label>
@@ -402,20 +412,17 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 
   <section class="chart" aria-labelledby="h-weekly">
     <h2 id="h-weekly">Weekly average</h2>
-    <p class="sub">Mean of each Monday-to-Sunday week.</p>
     <div class="readout" id="ro-weekly"></div>
     <div class="plot" id="plot-weekly"></div>
   </section>
 
   <section class="chart" aria-labelledby="h-wk">
     <h2 id="h-wk">Week by week</h2>
-    <p class="sub">Your average weight next to your average daily calories.</p>
     <div class="tablewrap"><table class="wk" id="wkTable"></table></div>
   </section>
 
   <section class="card maint" style="margin-bottom:0" aria-labelledby="h-maint">
     <h2 id="h-maint">Maintenance calories</h2>
-    <p class="muted" style="margin:-4px 0 10px">What you can eat each day to keep your weight steady.</p>
     <div id="mBody"></div>
     <details class="mset" id="mSet">
       <summary>Height and age for a rough guess</summary>
@@ -439,6 +446,8 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       <button type="button" id="fPrev" aria-label="Previous day">‹</button>
       <div class="d" id="fDay">
         <span id="fDayText"></span>
+        <button type="button" id="fCal" class="dicon" aria-label="Pick a day from the calendar"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+        <button type="button" id="fToday" class="dtoday" hidden>Today</button>
       </div>
       <button type="button" id="fNext" aria-label="Next day">›</button>
     </div>
@@ -603,6 +612,17 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
   <b id="nTitle"></b>
   <div id="nBody"></div>
   <button type="button" id="nDone" class="sheet-btn">Done</button>
+</div>
+<div class="sheet-back" id="calBack" hidden></div>
+<div class="sheet calsheet" id="calSheet" role="dialog" aria-modal="true" aria-labelledby="calTitle" hidden>
+  <div class="calhead">
+    <button type="button" id="calPrev" aria-label="Previous month">‹</button>
+    <b id="calTitle"></b>
+    <button type="button" id="calNext" aria-label="Next month">›</button>
+  </div>
+  <div class="calgrid calwk" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+  <div class="calgrid" id="calGrid"></div>
+  <button type="button" id="calToday" class="sheet-btn plain">Today</button>
 </div>
 <div class="sheet-back" id="setBack" hidden></div>
 <div class="sheet settings" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
@@ -1031,7 +1051,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
       const tr = document.createElement("tr");
       const chg = diff == null ? "<small>first week</small>" : `<span class="${diff > 0.05 ? "up" : diff < -0.05 ? "down" : ""}">${diff > 0 ? "+" : diff < 0 ? "−" : "±"}${lb(Math.abs(diff))} lb</span>`;
       tr.innerHTML = `<td class="wkrange">${range}</td><td>${lb(w.y)} lb</td><td>${chg}</td>` +
-        `<td>${avgK == null ? "<small>no food</small>" : `${fmtK(avgK)}<small class="wkdays">${logged.length} day${logged.length === 1 ? "" : "s"}</small>`}</td>`;
+        `<td>${avgK == null ? "<small>no food</small>" : fmtK(avgK)}</td>`;
       tb.appendChild(tr);
     });
     t.appendChild(tb);
@@ -1111,7 +1131,7 @@ details h3 { font-size: 1rem; margin: 20px 0 0; }
 </script>
 <script>
 // ================= version =================
-const APP_VERSION = "1.17.0";  // bump this with every release (see CHANGELOG.md in the repository)
+const APP_VERSION = "1.18.0";  // bump this with every release (see CHANGELOG.md in the repository)
 document.getElementById("appVersion").textContent = "Tracker version " + APP_VERSION;
 
 // ================= preferences =================
@@ -1351,6 +1371,7 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   let usage = {};           // { foodId: timesLogged } so the most-logged foods sort to the top
   let storeReady = false;   // true once food data is final (db loaded, or local-only)
   let day = iso(new Date());
+  let calMonth = null;      // first of the month (YYYY-MM-01) shown in the calendar sheet
   let db = null, mode = "local";
   let selected = null;      // food id open in the adder
   let entryDraft = null;    // { id, amount, unit, oil } while editing a logged entry's portion
@@ -1468,8 +1489,51 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
   })();
 
   // ---------- day navigation ----------
-  $("fPrev").addEventListener("click", () => { releaseSpacer(); entryDraft = null; day = shift(day, -1); closeAdder(); render(); });
-  $("fNext").addEventListener("click", () => { releaseSpacer(); entryDraft = null; day = shift(day, 1); closeAdder(); render(); });
+  function goToDay(key) { releaseSpacer(); entryDraft = null; day = key; closeAdder(); render(); }
+  $("fPrev").addEventListener("click", () => goToDay(shift(day, -1)));
+  $("fNext").addEventListener("click", () => goToDay(shift(day, 1)));
+  $("fToday").addEventListener("click", () => goToDay(iso(new Date())));
+
+  // ---------- month calendar (calendar icon by the date) ----------
+  function renderCal() {
+    const first = parse(calMonth), today = iso(new Date());
+    $("calTitle").textContent = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const g = $("calGrid"); g.innerHTML = "";
+    for (let i = (first.getDay() + 6) % 7; i > 0; i--) g.appendChild(document.createElement("span"));   // weeks start Monday
+    const n = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    for (let d = 1; d <= n; d++) {
+      const key = iso(new Date(first.getFullYear(), first.getMonth(), d)), logged = (days[key] || []).length > 0;
+      const b = document.createElement("button"); b.type = "button"; b.className = "cd"; b.textContent = d;
+      b.classList.toggle("has", logged); b.classList.toggle("today", key === today);
+      b.classList.toggle("sel", key === day); b.classList.toggle("future", key > today);
+      b.setAttribute("aria-label", parse(key).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + (logged ? ", food logged" : ""));
+      b.addEventListener("click", () => { closeCal(); goToDay(key); });
+      g.appendChild(b);
+    }
+  }
+  function moveMonth(n) { const d = parse(calMonth); d.setMonth(d.getMonth() + n); calMonth = iso(d); renderCal(); }
+  function openCal() {
+    calMonth = day.slice(0, 8) + "01"; renderCal();
+    $("calBack").hidden = false; $("calSheet").hidden = false;
+    requestAnimationFrame(() => { $("calBack").classList.add("show"); $("calSheet").classList.add("show"); });
+  }
+  function closeCal() {
+    $("calBack").classList.remove("show"); $("calSheet").classList.remove("show");
+    setTimeout(() => { $("calBack").hidden = true; $("calSheet").hidden = true; }, 260);
+  }
+  $("fCal").addEventListener("click", openCal);
+  $("calBack").addEventListener("click", closeCal);
+  $("calPrev").addEventListener("click", () => moveMonth(-1));
+  $("calNext").addEventListener("click", () => moveMonth(1));
+  $("calToday").addEventListener("click", () => { closeCal(); goToDay(iso(new Date())); });
+  // swipe left/right on the calendar to change months
+  let calTouch = null;
+  $("calSheet").addEventListener("touchstart", e => { const t = e.touches[0]; calTouch = { x: t.clientX, y: t.clientY }; }, { passive: true });
+  $("calSheet").addEventListener("touchend", e => {
+    if (!calTouch) return;
+    const t = e.changedTouches[0], dx = t.clientX - calTouch.x, dy = t.clientY - calTouch.y; calTouch = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) moveMonth(dx < 0 ? 1 : -1);
+  });
 
   // ---------- filter your foods ----------
   $("foodFilter").addEventListener("input", e => { foodFilter = e.target.value; renderQuick(); });
@@ -2369,7 +2433,9 @@ window.appPrefs = { proteinLow: 0.9, proteinHigh: 1.1 };   // protein goal range
     const today = iso(new Date());
     const rel = day === today ? "Today" : day === shift(today, -1) ? "Yesterday" : day === shift(today, 1) ? "Tomorrow" : "";
     $("fDayText").innerHTML = "";
-    $("fDayText").append(document.createTextNode(fmtLong(parse(day))));
+    $("fDayText").append(document.createTextNode(day === today ? fmtLong(parse(day))
+      : parse(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })));
+    $("fToday").hidden = day === today;
     if (rel) { const s = document.createElement("small"); s.textContent = rel; $("fDayText").appendChild(s); }
 
     $("eatenHead").textContent = day === today ? "Eaten Today" : day === shift(today, -1) ? "Eaten Yesterday"

@@ -67,6 +67,8 @@ The user-visible units are exactly: **grams, ounces, pounds, cups, tablespoons, 
 
 ## 5. Features and the behavior the owner asked for
 
+The Weight tab has no explanatory text under its headings (owner removed the intro line and chart/table/maintenance descriptions in 1.18.0); don't add them back.
+
 These are deliberate decisions. Keep them unless the owner asks otherwise.
 
 **Weight tab**
@@ -74,12 +76,12 @@ These are deliberate decisions. Keep them unless the owner asks otherwise.
 - Charts are hand-drawn SVG: "Day by day" and "Weekly average" (weeks start Monday), with date labels **centered under the points**. Tap a point to see its date, weight, and calories eaten. On "Day by day", tapping a point also shows a **"See food" button** in the readout; it's a two-tap confirm (tap once, then "Tap to open ›") that opens that day on the food tab via the `open-food-day` event — never automatic.
 - Deleting (from the chart or the list) takes **two taps**: "Delete", then "Tap again to delete". No `confirm()`.
 - Redraws keep your scroll position (`holdInPlace`, `scrollY` restore); the page must not jump.
-- Week-by-week table: the week's date range ("Nov 2 – 8", or "Oct 26 – Nov 1" across months), average weight, change from the previous week (neutral colors, since gaining isn't marked as bad), and average daily calories with the number of days logged under it (sized to fit 393 px without sideways scrolling).
+- Week-by-week table: the week's date range ("Nov 2 – 8", or "Oct 26 – Nov 1" across months), average weight, change from the previous week (neutral colors, since gaining isn't marked as bad), and average daily calories (no day counts, owner's request). The Week column is `width: 1%` so it hugs its dates; the table must fit 393 px without sideways scrolling.
 - Maintenance calories: over the last 28 days, the least-squares weight trend (lb/day) and the average calories on logged days. Maintenance ≈ average kcal − slope × 3500. Needs 10 weigh-ins, 10 food days, and a 14-day span; until then it shows a progress bar and an optional Mifflin-St Jeor × 1.9 estimate from height and age. The card is compact and sits just above "All weigh-ins".
 - **Averages leave out today** (owner's request, 1.16.0): today is still being logged, so the maintenance estimate, week-table calories, weekly-chart readout, and Nutrients totals only count finished days (`pastKcal()` in the weight module, a `today` skip in `weekStats`). A `visibilitychange` handler re-renders after midnight so yesterday joins the averages.
 
 **Food tab** (top to bottom)
-- Day switcher and totals (kcal, protein, carbs, fat).
+- Day switcher and totals (kcal, protein, carbs, fat). The switcher has ‹ › arrows, a **calendar icon** that opens a month calendar sheet (`#calSheet`: weeks start Monday, ‹ › or swipe to change months, a dot on days with food, today outlined, the shown day filled; tap a day to jump there, or **Today**), and a **Today** pill shown only when you're on another day (the date then uses a short weekday so it fits). All day changes go through `goToDay()`.
 - **Add New Food:** search bar, big **Scan nutrition label** button (opens the rear camera directly via `capture="environment"`), and an "Or enter a food by hand" link. The new-food panel opens right there. "Scan again" appears only after a scan.
 - **Foods:** a **"Filter your foods"** box above a grid of food buttons (names only, ~3 per row), inside a capped, scrollable wrapper (`.quickwrap`), **sorted by how often each food is logged** (most-used first; `usage` counts, ties keep order). Tap to log — `openAdder` scrolls the log panel into view so "Add to day" is reachable. **Double-tap** to rename in place (keyboard opens). **Press and hold** (480 ms) for a bottom sheet with just **Edit** and **Delete**; tap outside to close. The filter is a plain case-insensitive substring match on the name (kept simple to avoid a declaration-order dependency on `norm`).
 - The log panel (after tapping a food) has a pencil next to the name for renaming, amount and unit (switching units converts the amount), and oil for cooked foods. **Add to day** closes it instantly without moving the page.
