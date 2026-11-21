@@ -2,6 +2,14 @@
 
 Each entry says what changed, whether any file in `assets/` changed, and whether a new capability is needed. Updates use this to decide what to re-upload.
 
+## 1.17.0 (2026-11-21)
+
+- **Workout and rest days are removed** from the app: the dumbbell by the date, the solid/open dots and legend on the "Day by day" chart, and the "Workout days vs rest days" section. Any workout marks you saved are left untouched in storage but no longer used.
+- The **week-by-week table** now shows each week's full date range (for example "Oct 26 – Nov 1" instead of "Oct 26"). The calories column is now "Avg kcal", with the number of days logged underneath, so the table fits a phone screen.
+
+Assets changed: none.
+New capabilities: none.
+
 ## 1.16.0 (2026-11-07)
 
 - **Averages no longer include today**, since today isn't finished until it's over. This applies to the maintenance estimate ("You averaged … kcal a day"), the Avg calories column in the week-by-week table, the weekly chart's readout, the Workout days vs rest days comparison, and the Nutrients tab (targets now cover only finished days; it says "Today is added once it's over."). Today's own totals and protein bar on the Food tab are unchanged.
